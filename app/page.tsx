@@ -74,7 +74,7 @@ export default function HomePage() {
         >
           DAILY CHALLENGE
           <span className="block text-xs font-normal mt-0.5" style={{ color: "#00d4ff88" }}>
-            Defend 12 off 6 — same for everyone today
+            Defend a new total every day!
           </span>
         </Link>
 
