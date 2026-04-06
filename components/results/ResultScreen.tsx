@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useGameStore } from "@/store/gameStore";
 import { generateEmojiSummary } from "@/engine/simulation";
+import type { BallOutcome } from "@/types/game";
 
 export default function ResultScreen() {
   const match = useGameStore((s) => s.match);
@@ -17,9 +18,23 @@ export default function ResultScreen() {
   const emoji = generateEmojiSummary(ballLog, result, date);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(emoji);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(emoji);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for when document isn't focused (dev tools, extensions)
+      const textarea = document.createElement("textarea");
+      textarea.value = emoji;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const titleMap = {
@@ -55,17 +70,16 @@ export default function ResultScreen() {
         <StatCard label="BALLS" value={match.ballsBowled} />
       </div>
 
-      {/* Emoji grid */}
+      {/* Ball-by-ball circle grid */}
       <div
-        className="p-4 rounded-xl font-mono text-sm whitespace-pre text-center"
-        style={{
-          background: "#111a14",
-          border: "1px solid #1e3d2a",
-          color: "#e8f5ee",
-          lineHeight: 1.8,
-        }}
+        className="p-4 rounded-xl"
+        style={{ background: "#111a14", border: "1px solid #1e3d2a" }}
       >
-        {emoji}
+        <div className="flex gap-2 flex-wrap justify-center">
+          {ballLog.map((ball, i) => (
+            <BallCircle key={i} ball={ball} />
+          ))}
+        </div>
       </div>
 
       {/* Actions */}
@@ -107,6 +121,68 @@ export default function ResultScreen() {
         </Link>
       </div>
     </main>
+  );
+}
+
+function BallCircle({ ball }: { ball: BallOutcome }) {
+  let bg: string;
+  let border: string;
+  let label: string;
+  let textColor = "#0a0f0d";
+
+  if (ball.isWicket) {
+    bg = "#c0392b";
+    border = "#e74c3c";
+    label = "W";
+    textColor = "#fff";
+  } else if (ball.chaosEvent === "dropped_catch" || ball.chaosEvent === "overthrow" || ball.chaosEvent === "misfield") {
+    bg = "#e67e22";
+    border = "#f39c12";
+    label = String(ball.runsScored);
+    textColor = "#fff";
+  } else if (ball.runsScored === 0) {
+    bg = "#1a3a2a";
+    border = "#2e6b44";
+    label = "•";
+    textColor = "#4caf78";
+  } else if (ball.runsScored <= 2) {
+    bg = "#b8860b";
+    border = "#f0c030";
+    label = String(ball.runsScored);
+    textColor = "#fff8e0";
+  } else if (ball.runsScored === 4) {
+    bg = "#8b0000";
+    border = "#e53935";
+    label = "4";
+    textColor = "#fff";
+  } else if (ball.runsScored >= 6) {
+    bg = "#6a0000";
+    border = "#ff1744";
+    label = "6";
+    textColor = "#fff";
+  } else {
+    bg = "#b8860b";
+    border = "#f0c030";
+    label = String(ball.runsScored);
+    textColor = "#fff8e0";
+  }
+
+  return (
+    <div
+      className="flex items-center justify-center rounded-full font-mono font-black select-none"
+      style={{
+        width: 48,
+        height: 48,
+        background: bg,
+        border: `2px solid ${border}`,
+        color: textColor,
+        fontSize: label === "•" ? 28 : 16,
+        letterSpacing: 0,
+        boxShadow: `0 0 8px ${border}55`,
+      }}
+    >
+      {label}
+    </div>
   );
 }
 

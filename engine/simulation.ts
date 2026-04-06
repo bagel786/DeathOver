@@ -46,11 +46,11 @@ export interface DeliveryInput {
 // LENGTH — base contact probability (how easy is it to hit?)
 // ==============================================================
 const BASE_CONTACT_LENGTH: Record<DeliveryLength, number> = {
-  yorker:     0.35, // hardest to time, near the feet
-  full:       0.70, // driveable, batsman swinging hard in death
-  good_length: 0.60, // stock delivery, but risky swinging
-  short:      0.65, // pull/cut opportunity, aggressive batsmen attack
-  bouncer:    0.50, // risky pull, but death batsmen go for it
+  yorker:     0.42, // hard to time, but death batsmen practice scoops/flicks
+  full:       0.75, // slot ball in death overs — batsmen feast on full
+  good_length: 0.65, // hittable with intent, not a safe option in death
+  short:      0.70, // pull/cut — death batsmen attack short balls hard
+  bouncer:    0.55, // risky pull, but experienced death batsmen take it on
 };
 
 // ==============================================================
@@ -59,12 +59,12 @@ const BASE_CONTACT_LENGTH: Record<DeliveryLength, number> = {
 // Negative = harder to hit (unexpected movement)
 // ==============================================================
 const VARIATION_CONTACT_MOD: Record<DeliveryVariation, number> = {
-  pace:        +0.08, // standard — batsman expects it, easiest to time
-  slower_ball: -0.22, // big pace drop — hardest to time, biggest reward for using it well
-  off_cutter:  -0.16, // movement off pitch, seam can induce edge
-  leg_cutter:  -0.16, // movement away, can beat outside edge
-  outswing:    -0.12, // late swing, hard to follow
-  inswing:     -0.09, // swings in, slightly more pickable than outswing
+  pace:        +0.10, // stock ball — batsman ready for it, very hittable
+  slower_ball: -0.18, // pace drop — effective but batsmen in death expect it
+  off_cutter:  -0.12, // seam movement, but batsmen power through it
+  leg_cutter:  -0.12, // away movement, but less effective at death
+  outswing:    -0.08, // late swing, but batsmen plant front foot anyway
+  inswing:     -0.06, // swings in, batsmen use the pace
 };
 
 // ==============================================================
@@ -140,18 +140,17 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
   // Variation bluff: partially probabilistic — some batsmen still pick it up
   // ==============================================================
   if (wasLengthBluff) {
-    contactProb -= 0.12; // bowled a different length than AI expected
+    contactProb -= 0.08; // bowled differently than expected, but death batsmen adapt fast
   } else {
-    contactProb += 0.10; // AI read the length — slight advantage to batsman
+    contactProb += 0.12; // AI read the length — batsman ready, free hit territory
   }
 
   if (wasVariationBluff) {
-    // Variation surprise — extra contact penalty, but less extreme than before
-    // Aggressive/slogger batsmen can still muscle it even when beaten for variation
-    const variationPenalty = 0.08 * (1 - batsman.aggression * 0.4);
+    // Variation surprise — some penalty, but death batsmen muscle through
+    const variationPenalty = 0.05 * (1 - batsman.aggression * 0.5);
     contactProb -= variationPenalty;
   } else {
-    contactProb += 0.06; // Batsman picked the variation — ready for it
+    contactProb += 0.08; // Batsman picked the variation — sitting on it
   }
 
   // ==============================================================
@@ -165,13 +164,13 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     ? (batsman[vulnKey] as number)
     : (batsman.yorkerVulnerability + batsman.bounceVulnerability + batsman.spinVulnerability) / 3;
 
-  contactProb -= vulnerability * 0.12;
+  contactProb -= vulnerability * 0.08; // vulnerability matters less in death — batsmen commit fully
 
   // ==============================================================
   // STEP 7: Aggression / pressure modifier
   // ==============================================================
   if (pressure > 0.6) {
-    contactProb += batsman.aggression * 0.10; // batsman swings harder under pressure
+    contactProb += batsman.aggression * 0.14; // death batsmen thrive under pressure — this is what they train for
   }
 
   // ==============================================================
@@ -215,19 +214,19 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
   if (roll > contactProb) {
     // --- Poor contact / miss ---
     const missRoll = rng();
-    // Wicket probability: increases with delivery quality + recklessness under pressure
+    // Wicket probability: lower in death overs — batsmen are set, know their game
     const wicketChance =
-      (1 - contactProb) * 0.30 +
-      (pressure > 0.6 ? batsman.riskTolerance * 0.08 : 0);
+      (1 - contactProb) * 0.22 +
+      (pressure > 0.6 ? batsman.riskTolerance * 0.05 : 0);
 
     const isOffSideDelivery =
       deliveryLine === "wide_outside_off" || deliveryLine === "off";
 
     if (isDesperationSwing) {
-      // Desperation swing on poor contact: high risk, high reward
-      if (missRoll < 0.38) {
+      // Desperation swing on poor contact: death batsmen live for this — more reward than risk
+      if (missRoll < 0.28) {
         result = "wicket"; runsScored = 0; isWicket = true;
-      } else if (missRoll < 0.62) {
+      } else if (missRoll < 0.58) {
         result = "six"; runsScored = 6;
         shotAngle = (rng() < 0.5 ? 355 + rng() * 30 : 70 + rng() * 60);
         shotDistance = 1.0;
@@ -241,18 +240,22 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       result = "wicket";
       runsScored = 0;
       isWicket = true;
-    } else if (missRoll < wicketChance + 0.12) {
-      // Outside / top edge — deflects to the boundary
+    } else if (missRoll < wicketChance + 0.18) {
+      // Outside / top edge — deflects to the boundary (common in death overs with hard swings)
       result = "four";
       runsScored = 4;
       shotAngle = isOffSideDelivery
         ? 200 + rng() * 30  // third man region (200°-230°)
         : 120 + rng() * 30; // fine leg region (120°-150°)
       shotDistance = 0.88 + rng() * 0.08;
-    } else if (missRoll < wicketChance + 0.50) {
-      // Squeezed / dug out for a single or two — increased chance to reduce dots
-      result = "single";
-      runsScored = 1;
+    } else if (missRoll < wicketChance + 0.55) {
+      // Squeezed / dug out for a single or two — batsmen in death always look to rotate
+      const squeezeRoll = rng();
+      if (squeezeRoll < 0.35) {
+        result = "two"; runsScored = 2;
+      } else {
+        result = "single"; runsScored = 1;
+      }
       shotAngle = (rng() < 0.5 ? 5 : 355) + (rng() - 0.5) * 20;
       shotDistance = 0.40 + rng() * 0.15;
     } else {
@@ -275,38 +278,36 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
         result = "six"; runsScored = 6;
       }
     } else if (coverage > 0.40) {
-      // Fielder has to dive / sprint — contest between batsman and field
+      // Fielder has to dive / sprint — death batsmen back themselves to beat the field
       const runRoll = rng();
-      const sixChance = batsman.aggression * batsman.riskTolerance * 0.12;
+      const sixChance = batsman.aggression * batsman.riskTolerance * 0.18;
       if (runRoll < sixChance) {
         result = "six"; runsScored = 6;
-      } else if (runRoll < sixChance + 0.06) {
+      } else if (runRoll < sixChance + 0.03) {
         result = "dot"; runsScored = 0;
-      } else if (runRoll < sixChance + 0.24) {
+      } else if (runRoll < sixChance + 0.15) {
         result = "single"; runsScored = 1;
-      } else if (runRoll < sixChance + 0.52) {
+      } else if (runRoll < sixChance + 0.42) {
         result = "two"; runsScored = 2;
       } else {
         result = "four"; runsScored = 4;
       }
     } else {
-      // GAP — no fielder in this zone, punish poor field placement
+      // GAP — no fielder in this zone, death batsmen DESTROY gaps
       const gapRoll = rng();
-      const aggBonus = batsman.aggression * 0.20;
-      const sixProb  = 0.35 + aggBonus;           // 35–55% six in a gap
+      const aggBonus = batsman.aggression * 0.25;
+      const sixProb  = 0.40 + aggBonus;           // 40–65% six in a gap
       const fourProb = sixProb + 0.30;             // next 30% = four
-      // boundaryProb ~65–85% — bad field = almost certain boundary
+      // boundaryProb ~70–95% — leaving gaps in death is suicide
 
       if (gapRoll < sixProb) {
         result = "six"; runsScored = 6;
       } else if (gapRoll < fourProb) {
         result = "four"; runsScored = 4;
-      } else if (gapRoll < fourProb + 0.08) {
+      } else if (gapRoll < fourProb + 0.06) {
         result = "three"; runsScored = 3;
-      } else if (gapRoll < fourProb + 0.18) {
-        result = "two"; runsScored = 2;
       } else {
-        result = "single"; runsScored = 1;
+        result = "two"; runsScored = 2;
       }
     }
   }

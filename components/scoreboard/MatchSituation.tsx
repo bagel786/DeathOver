@@ -7,7 +7,7 @@ export default function MatchSituation() {
   const batsman = useGameStore((s) => s.batsman);
   const nonStriker = useGameStore((s) => s.nonStriker);
 
-  const runsNeeded = match.target - match.runsConceded;
+  const runsNeeded = Math.max(0, match.target - match.runsConceded);
   const ballsLeft = match.totalBalls - match.ballsBowled;
   const wktsLeft = match.wicketsRemaining;
   const rro = ballsLeft > 0 ? (runsNeeded / ballsLeft) * 6 : 0;

@@ -267,13 +267,15 @@ export const useGameStore = create<GameStore>()(
           draft.batsman = buildBatsman(newArchetype, newConfidence);
           // Non-striker stays unchanged — they don't cross on a caught/bowled
         } else {
-          // Update confidence only for the batsman who faced the ball
-          if (outcome.runsScored >= 4) {
+          // Update confidence — death batsmen are fearless, build momentum fast
+          if (outcome.runsScored >= 6) {
+            draft.batsman.confidence = Math.min(100, draft.batsman.confidence + 20);
+          } else if (outcome.runsScored >= 4) {
             draft.batsman.confidence = Math.min(100, draft.batsman.confidence + 15);
           } else if (outcome.runsScored > 0) {
-            draft.batsman.confidence = Math.min(100, draft.batsman.confidence + 5);
+            draft.batsman.confidence = Math.min(100, draft.batsman.confidence + 8);
           } else {
-            draft.batsman.confidence = Math.max(0, draft.batsman.confidence - 10);
+            draft.batsman.confidence = Math.max(0, draft.batsman.confidence - 5);
           }
         }
 

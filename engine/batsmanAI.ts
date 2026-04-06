@@ -266,13 +266,13 @@ export function chooseShotDirection(
     wide_outside_leg: [110, 128, 135],  // flick behind square: bkwd sq (110°), leg gully (128°), fine leg (135°)
   };
 
-  // Natural shot depth per delivery length
+  // Natural shot depth per delivery length — death batsmen swing BIG
   const LENGTH_DISTANCE: Record<DeliveryLength, number> = {
-    yorker:     0.50, // full ball → ground-level, can't get over fielders easily
-    full:       0.72, // full length → drives, can loft
-    good_length: 0.65, // drives and punches
-    short:      0.78, // pull / cut → can go deep
-    bouncer:    0.88, // pull / hook → deep
+    yorker:     0.55, // scoops and flicks can clear the inner ring
+    full:       0.78, // slot ball → lofted drives, death batsmen go aerial
+    good_length: 0.70, // standing tall, punching through the line
+    short:      0.82, // pull / cut → backs away and goes hard
+    bouncer:    0.90, // pull / hook → committed to the shot
   };
 
   const angles = LINE_ANGLES[line] ?? [0];

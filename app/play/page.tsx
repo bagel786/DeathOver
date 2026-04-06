@@ -23,6 +23,11 @@ export default function PlayPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // Reset showResults when a new game starts (isComplete goes back to false)
+  useEffect(() => {
+    if (!isComplete) setShowResults(false);
+  }, [isComplete]);
+
   const handleBowl = useCallback(() => {
     bowlDelivery();
     const log = useGameStore.getState().ballLog;

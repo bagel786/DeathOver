@@ -227,20 +227,19 @@ export default function CricketField({
           </text>
         </g>
 
-        {/* Outside-circle counter — outside field boundary */}
-        <g>
-          <rect x="78" y="80" width="14" height="6" rx="1.5"
-            fill={atLimit ? "#ff444422" : "#00000044"}
-            stroke={atLimit ? "#ff4444" : "#2d6a45"}
-            strokeWidth="0.4"
-          />
-          <text x="85" y="84.4" textAnchor="middle" fontSize="2.5" fontFamily="monospace"
-            fill={atLimit ? "#ff4444" : "#6b8c76"}
-          >
-            {outerCount}/5 OUT
-          </text>
-        </g>
       </svg>
+
+      {/* Outside-circle counter — positioned outside the field diagram */}
+      <div
+        className="absolute bottom-1 right-1 px-2 py-0.5 rounded text-xs font-mono font-bold tracking-wide"
+        style={{
+          background: atLimit ? "#ff444422" : "#00000066",
+          border: `1px solid ${atLimit ? "#ff4444" : "#2d6a45"}`,
+          color: atLimit ? "#ff4444" : "#6b8c76",
+        }}
+      >
+        {outerCount}/5 OUT
+      </div>
 
       {/* Hover label tooltip */}
       {hoverLabel && (
