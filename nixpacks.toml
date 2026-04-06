@@ -8,4 +8,4 @@ cmds = ["npm ci"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "cp -r /app/.next/static /app/.next/standalone/.next/static && HOSTNAME=0.0.0.0 node /app/.next/standalone/server.js"
+cmd = "npm run start"
