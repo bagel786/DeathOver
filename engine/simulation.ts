@@ -16,7 +16,7 @@ import type {
   BallOutcome,
   AIExpectation,
 } from "@/types/game";
-import { getZoneCoverage } from "@/engine/fieldMapping";
+import { getZoneCoverage, cartesianToPolar } from "@/engine/fieldMapping";
 import { getAIExpectation, chooseShotDirection } from "@/engine/batsmanAI";
 import { generateFeedbackMessage } from "@/engine/feedback";
 import { createGameRng } from "@/engine/rng";
@@ -309,6 +309,89 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       } else {
         result = "two"; runsScored = 2;
       }
+    }
+  }
+
+  // ==============================================================
+  // STEP 12b: Adjust shot direction to match the outcome visually
+  // The initial shotAngle/shotDistance from chooseShotDirection() was computed
+  // before the outcome — now we nudge it so dots go toward fielders,
+  // boundaries go into gaps, etc.
+  // All searches are constrained to the neighbourhood of the original
+  // shot direction so the visual stays consistent with the delivery line.
+  // ==============================================================
+
+  // Helper: angular difference (0–180)
+  const angDiff = (a: number, b: number) => {
+    const d = Math.abs(a - b) % 360;
+    return d > 180 ? 360 - d : d;
+  };
+
+  const originalAngle = shotAngle; // preserve for neighbourhood search
+
+  if (!isWicket) {
+    const fielderPolars = fielders.map((f) => cartesianToPolar(f.position.x, f.position.y));
+
+    if (result === "dot" || result === "single" || result === "two" || result === "three") {
+      // Find the nearest fielder within ±90° of the original shot direction
+      let bestIdx = -1;
+      let bestAngleDiff = 90; // only consider fielders within this window
+      for (let i = 0; i < fielderPolars.length; i++) {
+        const diff = angDiff(fielderPolars[i].angle, originalAngle);
+        if (diff < bestAngleDiff) {
+          bestAngleDiff = diff;
+          bestIdx = i;
+        }
+      }
+
+      if (bestIdx >= 0) {
+        const nearest = fielderPolars[bestIdx];
+        shotAngle = nearest.angle;
+        if (result === "dot") {
+          // Ball stopped by the fielder — land short of them
+          shotDistance = nearest.distance * 0.85;
+        } else if (result === "single") {
+          // Slightly past / beside the fielder
+          shotDistance = Math.min(0.70, nearest.distance * 1.05);
+          shotAngle = (shotAngle + (rng() < 0.5 ? 8 : -8) + 360) % 360;
+        } else {
+          // Two/three — further past, wider offset
+          shotDistance = Math.min(0.82, nearest.distance * 1.15);
+          shotAngle = (shotAngle + (rng() < 0.5 ? 12 : -12) + 360) % 360;
+        }
+      }
+      // If no fielder within ±90°, keep the original angle (rare but possible)
+
+    } else if (result === "four") {
+      // Find the largest gap near the original shot direction (within ±90°)
+      // so the four goes in a realistic direction relative to the delivery line
+      const nearbyAngles = fielderPolars
+        .map((p) => p.angle)
+        .filter((a) => angDiff(a, originalAngle) < 90);
+
+      if (nearbyAngles.length >= 2) {
+        // Sort and find gaps within this neighbourhood
+        nearbyAngles.sort((a, b) => a - b);
+        let bestGapCenter = originalAngle;
+        let bestGapSize = 0;
+        for (let i = 0; i < nearbyAngles.length; i++) {
+          const curr = nearbyAngles[i];
+          const next = nearbyAngles[(i + 1) % nearbyAngles.length];
+          const gap = ((next - curr + 360) % 360);
+          const gapCenter = (curr + gap / 2) % 360;
+          // Only use this gap if its center is also near the original direction
+          if (gap > bestGapSize && angDiff(gapCenter, originalAngle) < 90) {
+            bestGapSize = gap;
+            bestGapCenter = gapCenter;
+          }
+        }
+        shotAngle = bestGapCenter;
+      }
+      // else: fewer than 2 fielders nearby, keep original angle (it's already a gap)
+      shotDistance = 0.95 + rng() * 0.05; // reaches the boundary
+
+    } else if (result === "six") {
+      shotDistance = 1.0; // clears the boundary
     }
   }
 

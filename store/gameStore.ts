@@ -285,13 +285,14 @@ export const useGameStore = create<GameStore>()(
         const allOut = draft.match.wicketsRemaining <= 0;
 
         if (runsRemaining <= 0) {
-          // Batsman reached / exceeded target
+          // Batsman reached / exceeded target — chased down, bowler loses
           draft.match.isComplete = true;
-          draft.match.result = runsRemaining === 0 ? "tied" : "lost";
+          draft.match.result = "lost";
         } else if (ballsLeft === 0 || allOut) {
-          // Over complete or all out — bowler wins
+          // Over complete or all out
           draft.match.isComplete = true;
-          draft.match.result = "won";
+          // runsRemaining === 1 means scores are level (tied)
+          draft.match.result = runsRemaining === 1 ? "tied" : "won";
         }
 
         // Reset delivery selection for next ball

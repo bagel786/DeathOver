@@ -1,11 +1,46 @@
 "use client";
 
 import React, { useRef, useCallback, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore } from "@/store/gameStore";
 import FielderToken from "./FielderToken";
 import PitchStrip from "./PitchStrip";
 import BallTracer from "./BallTracer";
-import type { BallOutcome } from "@/types/game";
+import type { BallOutcome, BallResult } from "@/types/game";
+
+/**
+ * Find the nearest fielder to the shot endpoint.
+ * Only returns a fielder for non-boundary, non-wicket results (dot/single/two/three).
+ */
+function findNearestFielderId(outcome: BallOutcome): number | null {
+  const { shotDirection, result, isWicket, fieldSnapshot } = outcome;
+
+  // Only highlight for stops — not boundaries, wickets, or extras
+  const stoppableResults: BallResult[] = ["dot", "single", "two", "three"];
+  if (isWicket || !stoppableResults.includes(result)) return null;
+
+  // Endpoint uses same polar→cartesian as BallTracer (center at 50,50, radius 47)
+  const POLAR_CX = 50, POLAR_CY = 50, BOUNDARY_R = 47;
+  const angleRad = (shotDirection.angle * Math.PI) / 180;
+  const dist = shotDirection.distance * BOUNDARY_R;
+  const endX = POLAR_CX + Math.sin(angleRad) * dist;
+  const endY = POLAR_CY + Math.cos(angleRad) * dist;
+
+  let bestId: number | null = null;
+  let bestDist = 18; // max radius threshold — don't highlight if too far
+
+  for (const f of fieldSnapshot) {
+    const dx = f.position.x - endX;
+    const dy = f.position.y - endY;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < bestDist) {
+      bestDist = d;
+      bestId = f.id;
+    }
+  }
+
+  return bestId;
+}
 
 interface CricketFieldProps {
   lastOutcome?: BallOutcome | null;
@@ -32,6 +67,11 @@ export default function CricketField({
   const svgRef = useRef<SVGSVGElement>(null);
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [hoverLabel, setHoverLabel] = useState<string | null>(null);
+
+  // Determine which fielder to highlight during animation
+  const highlightedFielderId = (isAnimating && lastOutcome)
+    ? findNearestFielderId(lastOutcome)
+    : null;
 
   // Convert screen coordinates to SVG 0-100 space
   const toSvgCoords = useCallback(
@@ -185,12 +225,22 @@ export default function CricketField({
         <PitchStrip />
 
         {/* Ball trajectory animation */}
-        {isAnimating && lastOutcome && (
-          <BallTracer
-            outcome={lastOutcome}
-            onComplete={onAnimationComplete}
-          />
-        )}
+        <AnimatePresence>
+          {isAnimating && lastOutcome && (
+            <motion.g
+              key={lastOutcome.ballNumber}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <BallTracer
+                outcome={lastOutcome}
+                onComplete={onAnimationComplete}
+              />
+            </motion.g>
+          )}
+        </AnimatePresence>
 
         {/* Vignette overlay (after all field elements, before fielders) */}
         <ellipse cx="50" cy="50" rx="47" ry="47" fill="url(#vignetteGrad)" />
@@ -203,6 +253,7 @@ export default function CricketField({
               fielder={fielder}
               isDragging={draggingId === fielder.id}
               isDisabled={isComplete}
+              isHighlighted={highlightedFielderId === fielder.id}
               onDragStart={() => {
                 if (!isComplete) setDraggingId(fielder.id);
               }}

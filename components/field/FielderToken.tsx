@@ -1,12 +1,14 @@
 "use client";
 
 import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { Fielder } from "@/types/game";
 
 interface FielderTokenProps {
   fielder: Fielder;
   isDragging: boolean;
   isDisabled: boolean;
+  isHighlighted: boolean;
   onDragStart: () => void;
   onHover: (label: string | null) => void;
 }
@@ -15,6 +17,7 @@ export default function FielderToken({
   fielder,
   isDragging,
   isDisabled,
+  isHighlighted,
   onDragStart,
   onHover,
 }: FielderTokenProps) {
@@ -85,6 +88,24 @@ export default function FielderToken({
       >
         {fielder.id}
       </text>
+
+      {/* Highlight ring when fielder stops the ball */}
+      <AnimatePresence>
+        {isHighlighted && (
+          <motion.circle
+            key="highlight"
+            cx={position.x}
+            cy={position.y}
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth="0.8"
+            initial={{ r: 2, opacity: 0 }}
+            animate={{ r: 7, opacity: [0, 0.9, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, delay: 0.45, ease: "easeOut" }}
+          />
+        )}
+      </AnimatePresence>
     </g>
   );
 }
