@@ -5,11 +5,7 @@ nixPkgs = ["nodejs_20", "npm-10_x"]
 cmds = ["npm ci"]
 
 [phases.build]
-cmds = [
-  "npm run build",
-  "mkdir -p .next/standalone/.next",
-  "cp -r .next/static .next/standalone/.next/static"
-]
+cmds = ["npm run build"]
 
 [start]
-cmd = "node .next/standalone/server.js"
+cmd = "cp -r /app/.next/static /app/.next/standalone/.next/static && node /app/.next/standalone/server.js"
