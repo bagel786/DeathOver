@@ -1,2 +1,9 @@
 [phases.setup]
 nixPkgs = ["nodejs_20", "npm-10_x"]
+
+[phases.build]
+cmds = [
+  "npm run build",
+  "cp -r .next/static .next/standalone/.next/static",
+  "if [ -d public ]; then cp -r public .next/standalone/public; fi"
+]
