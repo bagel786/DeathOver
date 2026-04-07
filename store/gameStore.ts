@@ -354,7 +354,9 @@ export const useGameStore = create<GameStore>()(
     // --------------------------------------------------------
     setDailyChallenge(challenge) {
       set((draft) => {
-        const wcks = 1 + Math.floor(Math.random() * 10);
+        // Use seeded wickets from the challenge so every player faces the same situation.
+        // Fall back to random for legacy rows that pre-date this field.
+        const wcks = challenge.wickets_remaining ?? (1 + Math.floor(Math.random() * 10));
         draft.match = buildDefaultMatch(challenge.target_runs, challenge.total_balls, wcks);
         draft.batsman = buildBatsman(
           challenge.batsman_archetype,

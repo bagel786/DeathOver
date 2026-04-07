@@ -174,6 +174,7 @@ export interface DailyChallenge {
   date: string;
   target_runs: number;
   total_balls: number;
+  wickets_remaining: number;
   batsman_archetype: BatsmanArchetype;
   batsman_name: string;
   non_striker_archetype: BatsmanArchetype;

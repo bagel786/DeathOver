@@ -51,6 +51,8 @@ function generateChallenge(date: string) {
 
   // Target between 8 and 20 runs to defend
   const target = 8 + Math.floor(rng() * 13);
+  // Wickets remaining: 1-10 (seeded so every player gets the same challenge)
+  const wicketsRemaining = 1 + Math.floor(rng() * 10);
   // Confidence between 50-80
   const confidence = 50 + Math.floor(rng() * 31);
   // RNG seed for the game engine
@@ -60,6 +62,7 @@ function generateChallenge(date: string) {
     date,
     target_runs: target,
     total_balls: 6,
+    wickets_remaining: wicketsRemaining,
     batsman_archetype: batsmanArchetype,
     batsman_name: batsmanNames[Math.floor(rng() * batsmanNames.length)],
     non_striker_archetype: nonStrikerArchetype,
