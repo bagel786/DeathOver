@@ -144,7 +144,6 @@ export function getAIExpectation(
     bouncer: 0,
   };
 
-  const totalLegSide = z.leg_inner + z.leg_outer;
   const totalDeep = z.off_outer + z.leg_outer + z.straight_outer + z.behind_outer;
   const totalInner = z.off_inner + z.leg_inner + z.straight_inner + z.behind_inner;
 
@@ -247,6 +246,10 @@ export function getAIExpectation(
 /**
  * Given the delivery and batsman's tendencies, choose a target shot direction.
  * Returns polar angle (0°=toward bowler) and normalized distance (0-1).
+ *
+ * Shot angles are keyed by BOTH length and line so the result is physically
+ * plausible — e.g. a yorker cannot be cover-driven, a bouncer cannot be flicked
+ * straight, a scoop behind square only works on full/yorker deliveries, etc.
  */
 export function chooseShotDirection(
   batsman: BatsmanProfile,
@@ -256,26 +259,87 @@ export function chooseShotDirection(
   rng: () => number
 ): { angle: number; distance: number } {
 
-  // Natural shot angles per line (degrees):
-  // 0° = toward bowler (down/straight), 90° = leg side, 180° = behind, 270° = off side
-  const LINE_ANGLES: Record<string, number[]> = {
-    wide_outside_off: [257, 270, 282],  // cut: backward point (257°), point (270°), cover point (282°)
-    off:              [310, 325, 340],  // cover drive: cover (310°), extra cover (325°), long off (340°)
-    middle:           [345, 5, 15],     // straight drive: mid-off (345°), straight (0°), mid-on (15°)
-    leg:              [48, 75, 90],     // leg flick: mid-wicket (48°), fwd sq leg (75°), sq leg (90°)
-    wide_outside_leg: [110, 128, 135],  // flick behind square: bkwd sq (110°), leg gully (128°), fine leg (135°)
+  // Angle reference (polar, 0° = toward bowler, clockwise):
+  //   0°  = straight (long-on / long-off corridor)
+  //  55°  = mid-wicket
+  //  90°  = square leg
+  // 135°  = fine leg
+  // 180°  = behind wicket (keeper / fine leg region)
+  // 212°  = gully
+  // 248°  = backward point
+  // 270°  = point
+  // 282°  = cover point
+  // 310°  = cover
+  // 333°  = long off
+
+  // 2-D matrix: realistic shot angles keyed by [length][line]
+  const SHOT_ANGLES: Record<DeliveryLength, Record<string, number[]>> = {
+
+    // ── YORKER ────────────────────────────────────────────────────────────────
+    // The ball is at the batsman's feet. Drives are nearly impossible; realistic
+    // options are: squirt/squeeze through covers, straight dig-out, leg flick,
+    // scoop/ramp over fine leg or keeper.
+    yorker: {
+      wide_outside_off: [215, 232, 248], // squirt to third man / backward point
+      off:              [248, 265, 280], // squeezed to point / cover-point at best
+      middle:           [350, 0, 10],   // dug straight: mid-off / straight / mid-on
+      leg:              [30, 55, 75],   // flicked through mid-wicket
+      wide_outside_leg: [110, 128, 148], // scooped to fine leg / behind square
+    },
+
+    // ── FULL ──────────────────────────────────────────────────────────────────
+    // Pitching up — the classic slot ball. Batsmen can drive freely through all
+    // parts of the ground; flicks on leg, lofted drives off.
+    full: {
+      wide_outside_off: [257, 270, 282], // cut / cover-drive: point through cover-point
+      off:              [295, 312, 328], // cover drive: cover / extra cover
+      middle:           [342, 355, 15],  // straight drive: mid-off to mid-on corridor
+      leg:              [30, 50, 68],    // leg flick: straight-mid-on through mid-wicket
+      wide_outside_leg: [60, 80, 100],  // sweep / whip through sq leg / mid-wicket
+    },
+
+    // ── GOOD LENGTH ───────────────────────────────────────────────────────────
+    // Batsman can drive or pull depending on line; less free than full.
+    good_length: {
+      wide_outside_off: [240, 257, 272], // cut or push through backward point / point
+      off:              [280, 300, 318], // push/drive: cover-point through cover
+      middle:           [338, 352, 18],  // nudge or drive straight
+      leg:              [35, 55, 75],   // work through mid-wicket / leg side
+      wide_outside_leg: [75, 92, 112],  // push / sweep to sq leg / behind square
+    },
+
+    // ── SHORT ─────────────────────────────────────────────────────────────────
+    // Chest/shoulder height. Options: cut (off side), pull (leg side). No drives.
+    short: {
+      wide_outside_off: [225, 245, 260], // cut: gully through backward point
+      off:              [212, 232, 250], // upper-cut / cut: third man through backward point
+      middle:           [60, 80, 100],  // pull: mid-wicket through sq leg
+      leg:              [80, 100, 120], // pull / hook: sq leg to backward sq leg
+      wide_outside_leg: [100, 120, 138], // hook behind square / fine leg
+    },
+
+    // ── BOUNCER ───────────────────────────────────────────────────────────────
+    // Head height. Only realistic shots are the pull (leg-side, sq to fine leg)
+    // and the upper-cut / fend (off-side, gully / third man). No drives, no flicks.
+    bouncer: {
+      wide_outside_off: [200, 218, 235], // upper-cut: third man / gully region
+      off:              [208, 225, 245], // fend / upper-cut: gully through backward point
+      middle:           [55, 78, 100],  // pull: mid-wicket through sq leg
+      leg:              [80, 105, 125], // hook / pull: sq leg through backward sq leg
+      wide_outside_leg: [105, 128, 148], // hook behind square / fine leg (or duck)
+    },
   };
 
   // Natural shot depth per delivery length — death batsmen swing BIG
   const LENGTH_DISTANCE: Record<DeliveryLength, number> = {
-    yorker:     0.55, // scoops and flicks can clear the inner ring
-    full:       0.78, // slot ball → lofted drives, death batsmen go aerial
+    yorker:      0.55, // scoops / flicks can clear the inner ring but rarely go full boundary
+    full:        0.80, // slot ball → lofted drives, death batsmen go aerial
     good_length: 0.70, // standing tall, punching through the line
-    short:      0.82, // pull / cut → backs away and goes hard
-    bouncer:    0.90, // pull / hook → committed to the shot
+    short:       0.84, // pull / cut → backs away and goes hard
+    bouncer:     0.90, // pull / hook → fully committed shot
   };
 
-  const angles = LINE_ANGLES[line] ?? [0];
+  const angles = SHOT_ANGLES[deliveryLength]?.[line] ?? SHOT_ANGLES.good_length.middle;
   const baseAngle = angles[Math.floor(rng() * angles.length)];
   // ±15° of random variance in shot direction
   const angle = (baseAngle + (rng() - 0.5) * 30 + 360) % 360;

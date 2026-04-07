@@ -228,11 +228,31 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
         result = "wicket"; runsScored = 0; isWicket = true;
       } else if (missRoll < 0.58) {
         result = "six"; runsScored = 6;
-        shotAngle = (rng() < 0.5 ? 355 + rng() * 30 : 70 + rng() * 60);
+        // Angle must be realistic for the delivery length:
+        // Yorker → scoop over fine leg (128°-165°) or ramp over keeper (165°-210°); no slog sweeps
+        // Bouncer/short → pull/hook leg side (70°-135°) or upper-cut off side (200°-240°)
+        // Full/good length → lofted leg-side slog (20°-80°) or straight (340°-20°)
+        if (deliveryLength === "yorker") {
+          shotAngle = 128 + rng() * 82; // scoop / ramp: fine leg through keeper area
+        } else if (deliveryLength === "bouncer" || deliveryLength === "short") {
+          shotAngle = rng() < 0.75
+            ? 70 + rng() * 65   // pull/hook: mid-wicket through fine leg
+            : 200 + rng() * 40; // upper-cut: third man / gully
+        } else {
+          shotAngle = rng() < 0.5 ? (340 + rng() * 40) % 360 : 20 + rng() * 60; // straight or leg-side slog
+        }
         shotDistance = 1.0;
       } else {
         result = "four"; runsScored = 4;
-        shotAngle = (rng() < 0.5 ? 355 + rng() * 30 : 70 + rng() * 60);
+        if (deliveryLength === "yorker") {
+          shotAngle = 128 + rng() * 82; // scoop / ramp to the boundary
+        } else if (deliveryLength === "bouncer" || deliveryLength === "short") {
+          shotAngle = rng() < 0.75
+            ? 70 + rng() * 65
+            : 200 + rng() * 40;
+        } else {
+          shotAngle = rng() < 0.5 ? (340 + rng() * 40) % 360 : 20 + rng() * 60;
+        }
         shotDistance = 0.90 + rng() * 0.08;
       }
     } else if (missRoll < wicketChance) {
