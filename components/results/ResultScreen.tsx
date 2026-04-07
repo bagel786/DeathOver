@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useGameStore } from "@/store/gameStore";
-import { generateEmojiSummary } from "@/engine/simulation";
-import type { BallOutcome } from "@/types/game";
+import { generateEmojiSummary, calculateScore } from "@/engine/simulation";
+import type { BallOutcome, LeaderboardEntry } from "@/types/game";
 
 export default function ResultScreen() {
   const match = useGameStore((s) => s.match);
@@ -13,9 +13,76 @@ export default function ResultScreen() {
   const resetGame = useGameStore((s) => s.resetGame);
   const [copied, setCopied] = useState(false);
 
+  // Leaderboard state
+  const [displayName, setDisplayName] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [loadingBoard, setLoadingBoard] = useState(false);
+
   const result = match.result as "won" | "lost" | "tied";
   const date = daily?.date ?? new Date().toISOString().split("T")[0];
   const emoji = generateEmojiSummary(ballLog, result, date);
+  const isDaily = daily !== null && daily.challengeId !== "custom";
+
+  const score = calculateScore(
+    match.target,
+    match.runsConceded,
+    match.wicketsTaken,
+    match.ballsBowled,
+    match.totalBalls,
+    result
+  );
+
+  const fetchLeaderboard = useCallback(async () => {
+    if (!isDaily) return;
+    setLoadingBoard(true);
+    try {
+      const res = await fetch(`/api/leaderboard?challenge_id=${daily!.challengeId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLeaderboard(data);
+      }
+    } catch {
+      // silently fail — leaderboard is non-critical
+    } finally {
+      setLoadingBoard(false);
+    }
+  }, [isDaily, daily]);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [fetchLeaderboard]);
+
+  const handleSubmitScore = async () => {
+    if (!isDaily || !displayName.trim()) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/leaderboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challenge_id: daily!.challengeId,
+          display_name: displayName.trim(),
+          runs_conceded: match.runsConceded,
+          wickets_taken: match.wicketsTaken,
+          balls_used: match.ballsBowled,
+          result,
+          score,
+          emoji_summary: emoji,
+          ball_log: ballLog,
+        }),
+      });
+      if (res.ok) {
+        setSubmitted(true);
+        fetchLeaderboard();
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleCopy = async () => {
     try {
@@ -23,7 +90,6 @@ export default function ResultScreen() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for when document isn't focused (dev tools, extensions)
       const textarea = document.createElement("textarea");
       textarea.value = emoji;
       textarea.style.position = "fixed";
@@ -62,12 +128,13 @@ export default function ResultScreen() {
 
       {/* Stats */}
       <div
-        className="grid grid-cols-3 gap-4 p-6 rounded-2xl"
-        style={{ background: "#111a14", border: "1px solid #1e3d2a", minWidth: 320 }}
+        className="grid grid-cols-4 gap-4 p-6 rounded-2xl"
+        style={{ background: "#111a14", border: "1px solid #1e3d2a", minWidth: 380 }}
       >
         <StatCard label="RUNS GIVEN" value={match.runsConceded} />
         <StatCard label="WICKETS" value={match.wicketsTaken} />
         <StatCard label="BALLS" value={match.ballsBowled} />
+        <StatCard label="SCORE" value={score} highlight />
       </div>
 
       {/* Ball-by-ball circle grid */}
@@ -82,6 +149,103 @@ export default function ResultScreen() {
         </div>
       </div>
 
+      {/* Leaderboard submission (daily only) */}
+      {isDaily && !submitted && (
+        <div
+          className="flex flex-col gap-3 items-center p-5 rounded-2xl w-full"
+          style={{ background: "#111a14", border: "1px solid #1e3d2a", maxWidth: 400 }}
+        >
+          <p className="font-mono text-xs tracking-widest" style={{ color: "#00d4ff88" }}>
+            SUBMIT YOUR SCORE
+          </p>
+          <input
+            type="text"
+            placeholder="Your name..."
+            maxLength={20}
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-lg font-mono text-sm"
+            style={{
+              background: "#0a0f0d",
+              border: "1px solid #1e3d2a",
+              color: "#e8f5ee",
+              outline: "none",
+            }}
+          />
+          <button
+            onClick={handleSubmitScore}
+            disabled={!displayName.trim() || submitting}
+            className="w-full py-2.5 rounded-xl font-mono font-bold text-sm tracking-widest transition-all"
+            style={{
+              background: displayName.trim() ? "#00d4ff22" : "#ffffff05",
+              border: `1px solid ${displayName.trim() ? "#00d4ff" : "#1e3d2a"}`,
+              color: displayName.trim() ? "#00d4ff" : "#4a7a5a",
+              opacity: submitting ? 0.6 : 1,
+              cursor: displayName.trim() ? "pointer" : "not-allowed",
+            }}
+          >
+            {submitting ? "SUBMITTING..." : "SUBMIT"}
+          </button>
+        </div>
+      )}
+
+      {submitted && (
+        <p className="font-mono text-xs tracking-widest" style={{ color: "#00d4ff" }}>
+          SCORE SUBMITTED!
+        </p>
+      )}
+
+      {/* Leaderboard (daily only) */}
+      {isDaily && leaderboard.length > 0 && (
+        <div
+          className="w-full rounded-2xl overflow-hidden"
+          style={{ background: "#111a14", border: "1px solid #1e3d2a", maxWidth: 480 }}
+        >
+          <div className="px-5 py-3" style={{ borderBottom: "1px solid #1e3d2a" }}>
+            <p className="font-mono text-xs font-bold tracking-widest" style={{ color: "#00d4ff88" }}>
+              LEADERBOARD
+            </p>
+          </div>
+          <div className="flex flex-col">
+            {leaderboard.slice(0, 10).map((entry, i) => (
+              <div
+                key={entry.id}
+                className="flex items-center justify-between px-5 py-2.5 font-mono text-sm"
+                style={{
+                  borderBottom: i < Math.min(leaderboard.length, 10) - 1 ? "1px solid #1a2e2011" : undefined,
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="font-bold"
+                    style={{
+                      color: i === 0 ? "#ffcc00" : i === 1 ? "#c0c0c0" : i === 2 ? "#cd7f32" : "#4a7a5a",
+                      minWidth: 20,
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span style={{ color: "#e8f5ee" }}>{entry.display_name}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs" style={{ color: "#6b8c76" }}>
+                    {entry.runs_conceded}/{entry.wickets_taken} ({entry.balls_used}b)
+                  </span>
+                  <span className="font-bold" style={{ color: "#00d4ff" }}>
+                    {entry.score}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {loadingBoard && (
+            <p className="text-center py-3 font-mono text-xs" style={{ color: "#4a7a5a" }}>
+              Loading...
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex gap-3 flex-wrap justify-center">
         <button
@@ -93,7 +257,7 @@ export default function ResultScreen() {
             color: "#00d4ff",
           }}
         >
-          {copied ? "COPIED! ✓" : "SHARE RESULT"}
+          {copied ? "COPIED!" : "SHARE RESULT"}
         </button>
 
         <button
@@ -143,7 +307,7 @@ function BallCircle({ ball }: { ball: BallOutcome }) {
   } else if (ball.runsScored === 0) {
     bg = "#1a3a2a";
     border = "#2e6b44";
-    label = "•";
+    label = "\u2022";
     textColor = "#4caf78";
   } else if (ball.runsScored <= 2) {
     bg = "#b8860b";
@@ -176,7 +340,7 @@ function BallCircle({ ball }: { ball: BallOutcome }) {
         background: bg,
         border: `2px solid ${border}`,
         color: textColor,
-        fontSize: label === "•" ? 28 : 16,
+        fontSize: label === "\u2022" ? 28 : 16,
         letterSpacing: 0,
         boxShadow: `0 0 8px ${border}55`,
       }}
@@ -186,12 +350,12 @@ function BallCircle({ ball }: { ball: BallOutcome }) {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
     <div className="flex flex-col items-center gap-1">
       <span
         className="font-mono font-black"
-        style={{ fontSize: "clamp(24px, 5vw, 36px)", color: "#e8f5ee" }}
+        style={{ fontSize: "clamp(24px, 5vw, 36px)", color: highlight ? "#00d4ff" : "#e8f5ee" }}
       >
         {value}
       </span>

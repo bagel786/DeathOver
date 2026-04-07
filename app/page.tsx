@@ -1,4 +1,9 @@
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useGameStore } from "@/store/gameStore";
+import type { DailyChallenge } from "@/types/game";
 
 function IconUsers() {
   return (
@@ -32,6 +37,40 @@ function IconTrophy() {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const setDailyChallenge = useGameStore((s) => s.setDailyChallenge);
+  const startGame = useGameStore((s) => s.startGame);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDailyChallenge = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/daily-challenge");
+      if (!res.ok) throw new Error("Failed to fetch daily challenge");
+      const challenge: DailyChallenge = await res.json();
+      setDailyChallenge(challenge);
+      router.push("/play");
+    } catch {
+      setError("Could not load today's challenge. Try again!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCustomGame = () => {
+    startGame({
+      target: 12,
+      totalBalls: 6,
+      batsmanArchetype: "aggressive",
+      batsmanName: "Power Hitter",
+      nonStrikerArchetype: "accumulator",
+      nonStrikerName: "The Rotator",
+    });
+    router.push("/play");
+  };
+
   return (
     <main
       className="min-h-screen flex flex-col items-center justify-center gap-8 p-6"
@@ -62,36 +101,46 @@ export default function HomePage() {
 
       {/* Mode buttons */}
       <div className="flex flex-col gap-3 w-full" style={{ maxWidth: 400 }}>
-        <Link
-          href="/play"
+        <button
+          onClick={handleDailyChallenge}
+          disabled={loading}
           className="w-full py-4 rounded-2xl font-mono font-bold text-sm tracking-widest text-center transition-all"
           style={{
             background: "linear-gradient(135deg, #00d4ff18, #00d4ff30)",
             border: "1px solid #00d4ff",
             color: "#00d4ff",
             boxShadow: "0 0 30px rgba(0,212,255,0.1)",
+            opacity: loading ? 0.6 : 1,
+            cursor: loading ? "wait" : "pointer",
           }}
         >
-          DAILY CHALLENGE
+          {loading ? "LOADING..." : "DAILY CHALLENGE"}
           <span className="block text-xs font-normal mt-0.5" style={{ color: "#00d4ff88" }}>
             Defend a new total every day!
           </span>
-        </Link>
+        </button>
 
-        <Link
-          href="/play"
+        {error && (
+          <p className="text-xs font-mono text-center" style={{ color: "#ff4444" }}>
+            {error}
+          </p>
+        )}
+
+        <button
+          onClick={handleCustomGame}
           className="w-full py-3.5 rounded-2xl font-mono text-sm tracking-widest text-center"
           style={{
             background: "#ffffff05",
             border: "1px solid #1e3d2a",
             color: "#6b8c76",
+            cursor: "pointer",
           }}
         >
           CUSTOM GAME
           <span className="block text-xs mt-0.5" style={{ color: "#4a7a5a" }}>
             Set your own target and overs
           </span>
-        </Link>
+        </button>
       </div>
 
       {/* How it works */}
