@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Anton } from "next/font/google";
 import "./globals.css";
 
@@ -7,6 +7,11 @@ const anton = Anton({
   subsets: ["latin"],
   variable: "--font-anton",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "The Death Over Challenge",

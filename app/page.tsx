@@ -145,7 +145,7 @@ export default function HomePage() {
 
       {/* How it works */}
       <div
-        className="grid grid-cols-3 gap-6 p-5 rounded-2xl font-mono"
+        className="grid grid-cols-3 gap-3 sm:gap-6 p-5 rounded-2xl font-mono"
         style={{
           background: "#0d0d0d",
           border: "1px solid #1a2e20",
