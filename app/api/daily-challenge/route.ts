@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+
+// Never cache — the correct challenge depends on the current UTC date
+export const dynamic = "force-dynamic";
 import { createClient } from "@supabase/supabase-js";
 import type { BatsmanArchetype } from "@/types/game";
 
@@ -75,7 +78,7 @@ function generateChallenge(date: string) {
 }
 
 export async function GET() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split("T")[0]; // UTC date — consistent for all players
 
   // Try to fetch today's challenge
   const { data: existing, error: fetchError } = await supabase

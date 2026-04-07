@@ -47,7 +47,7 @@ export default function HomePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/daily-challenge");
+      const res = await fetch("/api/daily-challenge", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch daily challenge");
       const challenge: DailyChallenge = await res.json();
       setDailyChallenge(challenge);
