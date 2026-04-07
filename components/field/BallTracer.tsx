@@ -16,7 +16,10 @@ interface BallTracerProps {
 export default function BallTracer({ outcome, onComplete }: BallTracerProps) {
   const completedRef = useRef(false);
 
-  const { shotDirection, runsScored, isWicket } = outcome;
+  const { shotDirection, runsScored, isWicket, isCaught } = outcome;
+
+  // Bowled/LBW wickets don't produce a field trajectory — ball hits stumps, not outfield
+  const isBowledOrLBW = isWicket && !isCaught;
 
   // Convert polar shot direction to SVG cartesian end point
   // Polar center is (50,50) but ball starts from the batsman's crease at (50,42)
@@ -55,54 +58,59 @@ export default function BallTracer({ outcome, onComplete }: BallTracerProps) {
 
   return (
     <g>
-      {/* Glow trail behind the trajectory line */}
-      <motion.line
-        x1={BAT_X} y1={BAT_Y}
-        x2={endX} y2={endY}
-        stroke={ballColor}
-        strokeWidth="2"
-        strokeDasharray="3 2"
-        filter="url(#ballGlow)"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.3, 0.3, 0] }}
-        transition={{ duration: 0.9, times: [0, 0.15, 0.7, 1] }}
-      />
+      {/* Trajectory + moving ball — omitted for bowled/LBW (ball hits stumps, not outfield) */}
+      {!isBowledOrLBW && (
+        <>
+          {/* Glow trail behind the trajectory line */}
+          <motion.line
+            x1={BAT_X} y1={BAT_Y}
+            x2={endX} y2={endY}
+            stroke={ballColor}
+            strokeWidth="2"
+            strokeDasharray="3 2"
+            filter="url(#ballGlow)"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.3, 0.3, 0] }}
+            transition={{ duration: 0.9, times: [0, 0.15, 0.7, 1] }}
+          />
 
-      {/* Trajectory line — animates drawing via strokeDashoffset */}
-      <motion.line
-        x1={BAT_X} y1={BAT_Y}
-        x2={endX} y2={endY}
-        stroke={ballColor}
-        strokeWidth="0.5"
-        strokeDasharray={lineLength}
-        initial={{ strokeDashoffset: lineLength, opacity: 0 }}
-        animate={{
-          strokeDashoffset: 0,
-          opacity: [0, 0.7, 0.7, 0],
-        }}
-        transition={{
-          strokeDashoffset: { duration: 0.5, ease: "easeOut" },
-          opacity: { duration: 0.9, times: [0, 0.1, 0.7, 1] },
-        }}
-      />
+          {/* Trajectory line — animates drawing via strokeDashoffset */}
+          <motion.line
+            x1={BAT_X} y1={BAT_Y}
+            x2={endX} y2={endY}
+            stroke={ballColor}
+            strokeWidth="0.5"
+            strokeDasharray={lineLength}
+            initial={{ strokeDashoffset: lineLength, opacity: 0 }}
+            animate={{
+              strokeDashoffset: 0,
+              opacity: [0, 0.7, 0.7, 0],
+            }}
+            transition={{
+              strokeDashoffset: { duration: 0.5, ease: "easeOut" },
+              opacity: { duration: 0.9, times: [0, 0.1, 0.7, 1] },
+            }}
+          />
 
-      {/* Moving ball dot */}
-      <motion.circle
-        r="1.8"
-        fill={ballColor}
-        filter="url(#ballGlow)"
-        initial={{ cx: BAT_X, cy: BAT_Y, opacity: 1 }}
-        animate={{
-          cx: endX,
-          cy: endY,
-          opacity: [1, 1, 0],
-        }}
-        transition={{
-          cx: { duration: 0.5, ease: "easeOut" },
-          cy: { duration: 0.5, ease: "easeOut" },
-          opacity: { duration: 0.9, times: [0, 0.75, 1] },
-        }}
-      />
+          {/* Moving ball dot */}
+          <motion.circle
+            r="1.8"
+            fill={ballColor}
+            filter="url(#ballGlow)"
+            initial={{ cx: BAT_X, cy: BAT_Y, opacity: 1 }}
+            animate={{
+              cx: endX,
+              cy: endY,
+              opacity: [1, 1, 0],
+            }}
+            transition={{
+              cx: { duration: 0.5, ease: "easeOut" },
+              cy: { duration: 0.5, ease: "easeOut" },
+              opacity: { duration: 0.9, times: [0, 0.75, 1] },
+            }}
+          />
+        </>
+      )}
 
       {/* Wicket flash at batsman's stumps (y≈40) */}
       {isWicket && (
