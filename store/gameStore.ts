@@ -331,11 +331,21 @@ export const useGameStore = create<GameStore>()(
     // resetGame — go back to initial state
     // --------------------------------------------------------
     resetGame() {
+      const archetypes: BatsmanArchetype[] = ["aggressive", "anchor", "slogger", "accumulator"];
       const wickets = 1 + Math.floor(Math.random() * 10);
+      const target = 8 + Math.floor(Math.random() * 13); // 8-20
+      const confidence = 25 + Math.floor(Math.random() * 56); // 25-80
+      const arch = archetypes[Math.floor(Math.random() * archetypes.length)];
+      const nsArch = archetypes[Math.floor(Math.random() * archetypes.length)];
       set(() => ({
-        ...INITIAL_STATE,
-        match: buildDefaultMatch(12, 6, wickets),
+        match: buildDefaultMatch(target, 6, wickets),
+        batsman: buildBatsman(arch, confidence),
+        nonStriker: buildBatsman(nsArch),
         field: { fielders: buildDefaultFielders() },
+        currentDelivery: { length: null, variation: null, line: null },
+        ballLog: [],
+        daily: null,
+        rngCallCount: 0,
       }));
     },
 

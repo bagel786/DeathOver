@@ -117,6 +117,7 @@ export interface BallOutcome {
   result: BallResult;
   runsScored: number;
   isWicket: boolean;
+  isCaught: boolean;
   chaosEvent: ChaosEvent;
   /** Where the ball went, for animation (polar: 0° = toward bowler) */
   shotDirection: { angle: number; distance: number };

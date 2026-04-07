@@ -329,6 +329,65 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
 
   const originalAngle = shotAngle; // preserve for neighbourhood search
 
+  // Determine if a wicket is a catch (vs bowled / LBW)
+  // Uses the same delivery line + length logic as feedback.ts
+  let isCaught = false;
+  if (isWicket) {
+    const isBowled =
+      (deliveryLength === "yorker" && (deliveryLine === "off" || deliveryLine === "middle" || deliveryLine === "leg" || deliveryLine === "wide_outside_leg")) ||
+      (deliveryLength === "good_length" && deliveryLine === "middle");
+    const isLBW =
+      deliveryLength === "good_length" && (deliveryLine === "leg" || deliveryLine === "wide_outside_leg");
+    isCaught = !isBowled && !isLBW;
+  }
+
+  // For caught wickets, point the shot direction toward the catching fielder
+  if (isWicket && isCaught) {
+    const fielderPolars = fielders.map((f) => cartesianToPolar(f.position.x, f.position.y));
+    // Determine target catching angle based on delivery (matches feedback.ts logic)
+    let catchAngle = originalAngle;
+    if (deliveryLength === "yorker" && deliveryLine === "wide_outside_off") {
+      catchAngle = 270; // point area
+    } else if (deliveryLength === "bouncer" && (deliveryLine === "wide_outside_off" || deliveryLine === "off")) {
+      catchAngle = 212; // gully
+    } else if (deliveryLength === "bouncer" && (deliveryLine === "middle" || deliveryLine === "leg")) {
+      catchAngle = 135; // fine leg / deep square
+    } else if (deliveryLength === "full" && deliveryLine === "wide_outside_off") {
+      catchAngle = 195; // behind wicket, off side (keeper area)
+    } else if (deliveryLength === "full" && deliveryLine === "off") {
+      catchAngle = 195; // slip area
+    } else if (deliveryLength === "full" && deliveryLine === "middle") {
+      catchAngle = 345; // mid-off
+    } else if (deliveryLength === "full" && (deliveryLine === "leg" || deliveryLine === "wide_outside_leg")) {
+      catchAngle = 55; // mid-wicket
+    } else if (deliveryLength === "good_length" && deliveryLine === "wide_outside_off") {
+      catchAngle = 212; // gully
+    } else if (deliveryLength === "short" && (deliveryLine === "wide_outside_off" || deliveryLine === "off")) {
+      catchAngle = 212; // gully
+    } else if (deliveryLength === "short" && deliveryLine === "wide_outside_leg") {
+      catchAngle = 180; // keeper area
+    } else if (deliveryLength === "short" && (deliveryLine === "middle" || deliveryLine === "leg")) {
+      catchAngle = 90; // square leg
+    }
+
+    // Find the nearest fielder to the catch angle
+    let bestIdx = -1;
+    let bestAngleDiff = 180;
+    for (let i = 0; i < fielderPolars.length; i++) {
+      const diff = angDiff(fielderPolars[i].angle, catchAngle);
+      if (diff < bestAngleDiff) {
+        bestAngleDiff = diff;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx >= 0) {
+      const nearest = fielderPolars[bestIdx];
+      shotAngle = nearest.angle;
+      // Ball carries to the fielder (slightly short so it looks like a catch)
+      shotDistance = nearest.distance * 0.92;
+    }
+  }
+
   if (!isWicket) {
     const fielderPolars = fielders.map((f) => cartesianToPolar(f.position.x, f.position.y));
 
@@ -487,6 +546,7 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     result,
     runsScored,
     isWicket,
+    isCaught,
     chaosEvent,
     shotDirection: { angle: shotAngle, distance: shotDistance },
     feedbackMessage,

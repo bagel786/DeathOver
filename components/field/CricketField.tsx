@@ -15,9 +15,10 @@ import type { BallOutcome, BallResult } from "@/types/game";
 function findNearestFielderId(outcome: BallOutcome): number | null {
   const { shotDirection, result, isWicket, fieldSnapshot } = outcome;
 
-  // Only highlight for stops — not boundaries, wickets, or extras
+  // Highlight for stops and caught wickets — not boundaries or non-catch wickets
   const stoppableResults: BallResult[] = ["dot", "single", "two", "three"];
-  if (isWicket || !stoppableResults.includes(result)) return null;
+  const isCatchWicket = isWicket && outcome.isCaught;
+  if (!isCatchWicket && (isWicket || !stoppableResults.includes(result))) return null;
 
   // Endpoint uses same polar→cartesian as BallTracer (center at 50,50, radius 47)
   const POLAR_CX = 50, POLAR_CY = 50, BOUNDARY_R = 47;
