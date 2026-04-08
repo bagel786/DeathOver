@@ -339,7 +339,11 @@ export const useGameStore = create<GameStore>()(
     startGame(config) {
       set((draft) => {
         const wickets = config.wicketsRemaining ?? (1 + Math.floor(Math.random() * 10));
-        draft.match = buildDefaultMatch(config.target, config.totalBalls, wickets);
+        const rawTarget = Number(config.target);
+        const safeTarget = Math.min(36, Math.max(1, isNaN(rawTarget) ? 1 : rawTarget));
+        const rawBalls = Number(config.totalBalls);
+        const safeTotalBalls = Math.min(36, Math.max(1, isNaN(rawBalls) ? 6 : rawBalls));
+        draft.match = buildDefaultMatch(safeTarget, safeTotalBalls, wickets);
         draft.batsman = buildBatsman(
           config.batsmanArchetype,
           config.batsmanConfidence ?? 50
@@ -391,11 +395,14 @@ export const useGameStore = create<GameStore>()(
         // Fall back to random for legacy rows that pre-date this field.
         const wcks = challenge.wickets_remaining ?? (1 + Math.floor(Math.random() * 10));
         draft.match = buildDefaultMatch(challenge.target_runs, challenge.total_balls, wcks);
+        const VALID_ARCHETYPES: BatsmanArchetype[] = ["aggressive", "anchor", "slogger", "accumulator"];
+        const sanitizeArchetype = (a: unknown): BatsmanArchetype =>
+          VALID_ARCHETYPES.includes(a as BatsmanArchetype) ? (a as BatsmanArchetype) : "aggressive";
         draft.batsman = buildBatsman(
-          challenge.batsman_archetype,
+          sanitizeArchetype(challenge.batsman_archetype),
           challenge.batsman_confidence
         );
-        draft.nonStriker = buildBatsman(challenge.non_striker_archetype);
+        draft.nonStriker = buildBatsman(sanitizeArchetype(challenge.non_striker_archetype));
         draft.field = { fielders: buildDefaultFielders() };
         draft.currentDelivery = { length: null, variation: null, line: null };
 

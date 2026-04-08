@@ -1,18 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-
 export default function ErrorPage({
-  error,
+  error: _error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
-
   return (
     <main
       className="min-h-screen flex flex-col items-center justify-center gap-6 p-6"

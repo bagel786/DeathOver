@@ -33,6 +33,7 @@ export default function ResultScreen() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loadingBoard, setLoadingBoard] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState(false);
 
   const result = match.result as "won" | "lost" | "tied";
   const date = daily?.date ?? new Date().toISOString().split("T")[0];
@@ -65,6 +66,7 @@ export default function ResultScreen() {
   const fetchLeaderboard = useCallback(async () => {
     if (!isDaily) return;
     setLoadingBoard(true);
+    setLeaderboardError(false);
     try {
       const res = await fetch(`/api/leaderboard?challenge_id=${daily!.challengeId}`);
       if (res.ok) {
@@ -72,7 +74,7 @@ export default function ResultScreen() {
         setLeaderboard(data);
       }
     } catch {
-      // silently fail — leaderboard is non-critical
+      setLeaderboardError(true);
     } finally {
       setLoadingBoard(false);
     }
@@ -240,14 +242,18 @@ export default function ResultScreen() {
             <p className="text-center py-4 font-mono text-xs" style={{ color: "#4a7a5a" }}>
               Loading leaderboard...
             </p>
+          ) : leaderboardError && leaderboard.length === 0 ? (
+            <p className="text-center py-4 font-mono text-xs" style={{ color: "#ff4444" }}>
+              Failed to load leaderboard.
+            </p>
           ) : (
             <div className="flex flex-col">
-              {leaderboard.slice(0, 10).map((entry, i) => (
+              {leaderboard.slice(0, 20).map((entry, i) => (
                 <div
                   key={entry.id}
                   className="flex items-center justify-between px-5 py-2.5 font-mono text-sm"
                   style={{
-                    borderBottom: i < Math.min(leaderboard.length, 10) - 1 ? "1px solid #1a2e2011" : undefined,
+                    borderBottom: i < Math.min(leaderboard.length, 20) - 1 ? "1px solid #1a2e2011" : undefined,
                   }}
                 >
                   <div className="flex items-center gap-3">
