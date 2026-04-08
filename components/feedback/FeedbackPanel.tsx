@@ -11,8 +11,6 @@ const RESULT_LABELS: Record<string, { label: string; color: string }> = {
   four:   { label: "FOUR",    color: "#ff9800" },
   six:    { label: "SIX!",    color: "#9c27b0" },
   wicket: { label: "WICKET!", color: "#ff4444" },
-  wide:   { label: "WIDE",    color: "#ff9800" },
-  no_ball:{ label: "NO BALL", color: "#ff9800" },
 };
 
 interface FeedbackPanelProps {

@@ -47,11 +47,10 @@ export default function BallTracer({ outcome, onComplete }: BallTracerProps) {
   const lineLength = Math.sqrt(dx * dx + dy * dy);
 
   useEffect(() => {
+    completedRef.current = false; // reset for each new ball
     const timer = setTimeout(() => {
-      if (!completedRef.current) {
-        completedRef.current = true;
-        onComplete();
-      }
+      completedRef.current = true;
+      onComplete();
     }, 900);
     return () => clearTimeout(timer);
   }, [onComplete]);

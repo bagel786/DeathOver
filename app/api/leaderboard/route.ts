@@ -39,11 +39,45 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Validate and sanitize fields
+  const displayName = String(body.display_name).trim();
+  if (displayName.length === 0 || displayName.length > 30) {
+    return NextResponse.json({ error: "display_name must be 1–30 characters" }, { status: 400 });
+  }
+
+  if (!Number.isInteger(body.runs_conceded) || body.runs_conceded < 0 || body.runs_conceded > 150) {
+    return NextResponse.json({ error: "runs_conceded must be an integer 0–150" }, { status: 400 });
+  }
+
+  if (!Number.isInteger(body.wickets_taken) || body.wickets_taken < 0 || body.wickets_taken > 10) {
+    return NextResponse.json({ error: "wickets_taken must be an integer 0–10" }, { status: 400 });
+  }
+
+  if (!Number.isInteger(body.balls_used) || body.balls_used < 1 || body.balls_used > 6) {
+    return NextResponse.json({ error: "balls_used must be an integer 1–6" }, { status: 400 });
+  }
+
+  if (!["won", "lost", "tied"].includes(body.result)) {
+    return NextResponse.json({ error: "result must be 'won', 'lost', or 'tied'" }, { status: 400 });
+  }
+
+  if (!Number.isInteger(body.score) || body.score < 0) {
+    return NextResponse.json({ error: "score must be a non-negative integer" }, { status: 400 });
+  }
+
+  if (typeof body.emoji_summary !== "string" || body.emoji_summary.length > 50) {
+    return NextResponse.json({ error: "emoji_summary must be a string under 50 characters" }, { status: 400 });
+  }
+
+  if (!Array.isArray(body.ball_log) || body.ball_log.length > 10) {
+    return NextResponse.json({ error: "ball_log must be an array with at most 10 items" }, { status: 400 });
+  }
+
   const { data, error } = await supabase
     .from("leaderboard_entries")
     .insert({
       challenge_id: body.challenge_id,
-      display_name: body.display_name,
+      display_name: displayName,
       runs_conceded: body.runs_conceded,
       wickets_taken: body.wickets_taken,
       balls_used: body.balls_used,

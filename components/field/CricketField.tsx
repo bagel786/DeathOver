@@ -66,6 +66,7 @@ export default function CricketField({
   const atLimit = outerCount >= 5;
 
   const svgRef = useRef<SVGSVGElement>(null);
+  const rafRef = useRef<number | null>(null);
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [hoverLabel, setHoverLabel] = useState<string | null>(null);
 
@@ -91,13 +92,21 @@ export default function CricketField({
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
       if (draggingId === null || isComplete) return;
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       const { x, y } = toSvgCoords(e.clientX, e.clientY);
-      placeFielder(draggingId, x, y);
+      rafRef.current = requestAnimationFrame(() => {
+        placeFielder(draggingId, x, y);
+        rafRef.current = null;
+      });
     },
     [draggingId, isComplete, placeFielder, toSvgCoords]
   );
 
   const handlePointerUp = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     setDraggingId(null);
   }, []);
 

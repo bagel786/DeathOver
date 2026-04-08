@@ -73,6 +73,12 @@ export default function MatchSituation() {
         <span className="text-sm font-mono font-bold" style={{ color: rrColor }}>
           {rro > 0 ? rro.toFixed(1) : "—"}
         </span>
+        <span
+          className="text-xs font-mono px-1 rounded"
+          style={{ background: rrColor + "22", border: `1px solid ${rrColor}44`, color: rrColor }}
+        >
+          {isHigh ? "HIGH" : isMed ? "MED" : "LOW"}
+        </span>
         <span className="text-xs font-mono" style={{ color: "#4a7a5a" }}>per over</span>
         {match.wicketsTaken > 0 && (
           <span className="ml-auto text-xs font-mono" style={{ color: "#ff444488" }}>

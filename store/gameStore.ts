@@ -11,6 +11,7 @@ import type {
 import { BATSMAN_PROFILES } from "@/engine/batsmanAI";
 import { recomputeFielderMeta } from "@/engine/fieldMapping";
 import { calculateDeliveryOutcome } from "@/engine/simulation";
+import { createGameRng } from "@/engine/rng";
 
 // ============================================================
 // Default Starting Field (spread fielders sensibly around the boundary)
@@ -259,11 +260,15 @@ export const useGameStore = create<GameStore>()(
         if (outcome.isWicket) {
           draft.match.wicketsTaken += 1;
           draft.match.wicketsRemaining -= 1;
-          // A fresh batsman comes to the crease — choose a random archetype
           const archetypes: BatsmanArchetype[] = ["aggressive", "anchor", "slogger", "accumulator"];
-          const newArchetype = archetypes[Math.floor(Math.random() * archetypes.length)];
+          // Use seeded RNG for daily challenges so same seed always produces same replacement batsman.
+          // Offset by 50 to avoid colliding with the per-ball RNG sub-sequence.
+          const wicketRng = draft.daily?.seed != null
+            ? createGameRng(draft.daily.seed, draft.rngCallCount * 100 + 50)
+            : Math.random;
+          const newArchetype = archetypes[Math.floor(wicketRng() * archetypes.length)];
           // New batsman starts nervous (confidence 25-45)
-          const newConfidence = 25 + Math.floor(Math.random() * 21);
+          const newConfidence = 25 + Math.floor(wicketRng() * 21);
           draft.batsman = buildBatsman(newArchetype, newConfidence);
           // Non-striker stays unchanged — they don't cross on a caught/bowled
         } else {

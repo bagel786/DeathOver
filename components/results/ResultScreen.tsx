@@ -17,6 +17,7 @@ export default function ResultScreen() {
   const [displayName, setDisplayName] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loadingBoard, setLoadingBoard] = useState(false);
 
@@ -57,6 +58,7 @@ export default function ResultScreen() {
   const handleSubmitScore = async () => {
     if (!isDaily || !displayName.trim()) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
       const res = await fetch("/api/leaderboard", {
         method: "POST",
@@ -76,9 +78,11 @@ export default function ResultScreen() {
       if (res.ok) {
         setSubmitted(true);
         fetchLeaderboard();
+      } else {
+        setSubmitError("Submission failed. Check your connection and try again.");
       }
     } catch {
-      // silently fail
+      setSubmitError("Submission failed. Check your connection and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -128,8 +132,8 @@ export default function ResultScreen() {
 
       {/* Stats */}
       <div
-        className="grid grid-cols-4 gap-4 p-6 rounded-2xl"
-        style={{ background: "#111a14", border: "1px solid #1e3d2a", minWidth: 380 }}
+        className="grid grid-cols-4 gap-4 p-6 rounded-2xl w-full"
+        style={{ background: "#111a14", border: "1px solid #1e3d2a" }}
       >
         <StatCard label="RUNS GIVEN" value={match.runsConceded} />
         <StatCard label="WICKETS" value={match.wicketsTaken} />
@@ -161,7 +165,7 @@ export default function ResultScreen() {
           <input
             type="text"
             placeholder="Your name..."
-            maxLength={20}
+            maxLength={30}
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             className="w-full px-4 py-2.5 rounded-lg font-mono text-sm"
@@ -172,6 +176,9 @@ export default function ResultScreen() {
               outline: "none",
             }}
           />
+          <p className="self-end text-xs font-mono" style={{ color: "#4a7a5a" }}>
+            {30 - displayName.length} left
+          </p>
           <button
             onClick={handleSubmitScore}
             disabled={!displayName.trim() || submitting}
@@ -186,6 +193,11 @@ export default function ResultScreen() {
           >
             {submitting ? "SUBMITTING..." : "SUBMIT"}
           </button>
+          {submitError && (
+            <p className="text-xs font-mono text-center" style={{ color: "#ff4444" }}>
+              {submitError}
+            </p>
+          )}
         </div>
       )}
 
@@ -196,7 +208,7 @@ export default function ResultScreen() {
       )}
 
       {/* Leaderboard (daily only) */}
-      {isDaily && leaderboard.length > 0 && (
+      {isDaily && (loadingBoard || leaderboard.length > 0) && (
         <div
           className="w-full rounded-2xl overflow-hidden"
           style={{ background: "#111a14", border: "1px solid #1e3d2a", maxWidth: 480 }}
@@ -206,41 +218,47 @@ export default function ResultScreen() {
               LEADERBOARD
             </p>
           </div>
-          <div className="flex flex-col">
-            {leaderboard.slice(0, 10).map((entry, i) => (
-              <div
-                key={entry.id}
-                className="flex items-center justify-between px-5 py-2.5 font-mono text-sm"
-                style={{
-                  borderBottom: i < Math.min(leaderboard.length, 10) - 1 ? "1px solid #1a2e2011" : undefined,
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className="font-bold"
-                    style={{
-                      color: i === 0 ? "#ffcc00" : i === 1 ? "#c0c0c0" : i === 2 ? "#cd7f32" : "#4a7a5a",
-                      minWidth: 20,
-                    }}
-                  >
-                    {i + 1}
-                  </span>
-                  <span style={{ color: "#e8f5ee" }}>{entry.display_name}</span>
+          {loadingBoard && leaderboard.length === 0 ? (
+            <p className="text-center py-4 font-mono text-xs" style={{ color: "#4a7a5a" }}>
+              Loading leaderboard...
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {leaderboard.slice(0, 10).map((entry, i) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between px-5 py-2.5 font-mono text-sm"
+                  style={{
+                    borderBottom: i < Math.min(leaderboard.length, 10) - 1 ? "1px solid #1a2e2011" : undefined,
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="font-bold"
+                      style={{
+                        color: i === 0 ? "#ffcc00" : i === 1 ? "#c0c0c0" : i === 2 ? "#cd7f32" : "#4a7a5a",
+                        minWidth: 20,
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span style={{ color: "#e8f5ee" }}>{entry.display_name}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs" style={{ color: "#6b8c76" }}>
+                      {entry.runs_conceded}/{entry.wickets_taken} ({entry.balls_used}b)
+                    </span>
+                    <span className="font-bold" style={{ color: "#00d4ff" }}>
+                      {entry.score}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs" style={{ color: "#6b8c76" }}>
-                    {entry.runs_conceded}/{entry.wickets_taken} ({entry.balls_used}b)
-                  </span>
-                  <span className="font-bold" style={{ color: "#00d4ff" }}>
-                    {entry.score}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-          {loadingBoard && (
+              ))}
+            </div>
+          )}
+          {loadingBoard && leaderboard.length > 0 && (
             <p className="text-center py-3 font-mono text-xs" style={{ color: "#4a7a5a" }}>
-              Loading...
+              Refreshing...
             </p>
           )}
         </div>

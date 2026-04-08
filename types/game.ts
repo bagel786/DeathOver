@@ -57,9 +57,7 @@ export type BallResult =
   | "three"
   | "four"
   | "six"
-  | "wicket"
-  | "wide"
-  | "no_ball";
+  | "wicket";
 
 export type ChaosEvent =
   | "dropped_catch"
