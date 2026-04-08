@@ -61,6 +61,7 @@ function buildDefaultMatch(
     wicketsRemaining,
     isComplete: false,
     result: "pending" as GameResult,
+    nextBallIsFreeBit: false,
   };
 }
 
@@ -242,6 +243,7 @@ export const useGameStore = create<GameStore>()(
         baseSeed: daily?.seed ?? null,
         rngCallCount,
         lastVariation,
+        isFreeBit: match.nextBallIsFreeBit,
       });
 
       set((draft) => {
@@ -251,7 +253,21 @@ export const useGameStore = create<GameStore>()(
 
         // Update match state
         draft.match.runsConceded += outcome.runsScored;
-        draft.match.ballsBowled += 1;
+        // Wide / no-ball: ball is NOT consumed — bowler must re-bowl
+        if (!outcome.isExtraDelivery) {
+          draft.match.ballsBowled += 1;
+        }
+        // Track whether the next ball is a free hit
+        draft.match.nextBallIsFreeBit = outcome.triggersFreeHit;
+
+        // Extra deliveries (wide/no-ball) don't affect striker's faced count or confidence
+        if (outcome.isExtraDelivery) {
+          // Add the penalty run to striker's scorecard but don't count the ball faced
+          draft.batsman.runsScored += outcome.runsScored;
+          // Reset delivery and exit — no end-condition check needed (ball not consumed)
+          draft.currentDelivery = { length: null, variation: null, line: null };
+          return;
+        }
 
         // Update striker's stats for THIS ball before any swap
         draft.batsman.ballsFaced += 1;

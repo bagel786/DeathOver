@@ -64,6 +64,8 @@ export type ChaosEvent =
   | "overthrow"
   | "misfield"
   | "stumping_missed"
+  | "wide"
+  | "no_ball"
   | null;
 
 export type GameResult = "pending" | "won" | "lost" | "tied";
@@ -120,6 +122,10 @@ export interface BallOutcome {
   /** Where the ball went, for animation (polar: 0° = toward bowler) */
   shotDirection: { angle: number; distance: number };
   feedbackMessage: string;
+  /** True for wides and no-balls — this delivery does not consume a ball (ballsBowled not incremented) */
+  isExtraDelivery: boolean;
+  /** True for no-balls — the next delivery is a free hit (batsman cannot be dismissed) */
+  triggersFreeHit: boolean;
 }
 
 // --- Match ---
@@ -133,6 +139,8 @@ export interface MatchState {
   wicketsRemaining: number; // wickets left in hand (1-10, random at game start)
   isComplete: boolean;
   result: GameResult;
+  /** True when the previous delivery was a no-ball — next ball is a free hit */
+  nextBallIsFreeBit: boolean;
 }
 
 // --- Batsman in Match ---

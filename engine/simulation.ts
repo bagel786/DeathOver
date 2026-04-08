@@ -40,6 +40,8 @@ export interface DeliveryInput {
   rngCallCount: number;
   /** Last variation bowled (for AI pattern reading) */
   lastVariation: DeliveryVariation | null;
+  /** True when the previous ball was a no-ball — batsman cannot be dismissed this delivery */
+  isFreeBit: boolean;
 }
 
 // ==============================================================
@@ -47,7 +49,7 @@ export interface DeliveryInput {
 // ==============================================================
 const BASE_CONTACT_LENGTH: Record<DeliveryLength, number> = {
   yorker:     0.42, // hard to time, but death batsmen practice scoops/flicks
-  full:       0.75, // slot ball in death overs — batsmen feast on full
+  full:       0.70, // slot ball in death overs — hittable but not automatic contact
   good_length: 0.65, // hittable with intent, not a safe option in death
   short:      0.70, // pull/cut — death batsmen attack short balls hard
   bouncer:    0.55, // risky pull, but experienced death batsmen take it on
@@ -104,11 +106,71 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     baseSeed,
     rngCallCount,
     lastVariation,
+    isFreeBit,
   } = input;
 
   // Create a deterministic RNG for this ball
   const seed = baseSeed !== null ? baseSeed : Math.floor(Math.random() * 0xffffffff);
   const rng = createGameRng(seed, rngCallCount);
+
+  // ==============================================================
+  // PRE-CHECK A: Wide (bowling error — happens before batsman plays)
+  // Probability depends on chosen line and length. Risky lines (leg-side, extreme off)
+  // and yorker/bouncer attempts increase the chance of a wide being called.
+  // ==============================================================
+  const WIDE_LINE_PROB: Record<DeliveryLine, number> = {
+    wide_outside_off: 0.05,  // deliberately extreme line — umpire watches closely
+    off:              0.015,
+    middle:           0.008, // very unlikely on middle stump
+    leg:              0.025,
+    wide_outside_leg: 0.09,  // high — any height/deviation down leg = wide
+  };
+  const wideLengthMod =
+    deliveryLength === "yorker"  ? 1.5 : // precise execution required
+    deliveryLength === "bouncer" ? 1.3 : // height + line both scrutinised
+    1.0;
+  const wideProb = WIDE_LINE_PROB[deliveryLine] * wideLengthMod;
+  const wideRoll = rng();
+
+  if (wideRoll < wideProb) {
+    const lineNames: Record<DeliveryLine, string> = {
+      wide_outside_off: "wide outside off",
+      off:              "off stump line",
+      middle:           "middle stump",
+      leg:              "leg stump",
+      wide_outside_leg: "down leg",
+    };
+    const wideFeedback = deliveryLength === "yorker"
+      ? `Wide! The yorker attempt on ${lineNames[deliveryLine]} went too far — umpire signals immediately. Extra run, bowl again.`
+      : deliveryLength === "bouncer"
+      ? `Wide! The bouncer on ${lineNames[deliveryLine]} was called wide — too far down leg or climbing past the batsman. Extra run, bowl again.`
+      : `Wide called on ${lineNames[deliveryLine]}! An extra run is added and you must bowl this ball again.`;
+
+    return {
+      ballNumber,
+      delivery:        { length: deliveryLength, variation: deliveryVariation, line: deliveryLine },
+      fieldSnapshot:   fielders,
+      aiExpectation:   { length: deliveryLength, variation: deliveryVariation },
+      wasLengthBluff:  false,
+      wasVariationBluff: false,
+      result:          "dot",
+      runsScored:      1,
+      isWicket:        false,
+      isCaught:        false,
+      chaosEvent:      "wide",
+      shotDirection:   { angle: 180, distance: 0.30 }, // drifts behind keeper
+      feedbackMessage: wideFeedback,
+      isExtraDelivery: true,
+      triggersFreeHit: false,
+    };
+  }
+
+  // ==============================================================
+  // PRE-CHECK B: No-ball (foot fault — delivery still bowled)
+  // Batsman cannot be dismissed this ball (except run out, which we don't model).
+  // +1 run automatically added; next ball is a free hit.
+  // ==============================================================
+  const isNoBall = rng() < 0.015; // ~1.5% per delivery
 
   // ==============================================================
   // STEP 1: Match pressure (0=calm, 1=desperate)
@@ -198,8 +260,8 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
   // This can result in a 6, 4, or get them out.
   // ==============================================================
   const desperationRoll = rng();
-  // Death batsmen are always looking to swing — threshold raised significantly
-  const desperationThreshold = 0.25 + pressure * batsman.riskTolerance * batsman.aggression * 0.60;
+  // Desperation swing only when pressure builds — low base ensures it's not triggered randomly
+  const desperationThreshold = 0.10 + pressure * batsman.riskTolerance * batsman.aggression * 0.60;
   const isDesperationSwing = desperationRoll < desperationThreshold;
 
   // ==============================================================
@@ -223,10 +285,11 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       deliveryLine === "wide_outside_off" || deliveryLine === "off";
 
     if (isDesperationSwing) {
-      // Desperation swing on poor contact: death batsmen live for this — more reward than risk
-      if (missRoll < 0.28) {
+      // Desperation swing on poor contact: high dismissal risk — this is a gamble, not a guarantee
+      // 45% wicket | 15% six | 40% four — swinging hard when out of position usually ends badly
+      if (missRoll < 0.45) {
         result = "wicket"; runsScored = 0; isWicket = true;
-      } else if (missRoll < 0.58) {
+      } else if (missRoll < 0.60) {
         result = "six"; runsScored = 6;
         // Angle must be realistic for the delivery length:
         // Yorker → scoop over fine leg (128°-165°) or ramp over keeper (165°-210°); no slog sweeps
@@ -260,8 +323,8 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       result = "wicket";
       runsScored = 0;
       isWicket = true;
-    } else if (missRoll < wicketChance + 0.18) {
-      // Outside / top edge — deflects to the boundary (common in death overs with hard swings)
+    } else if (missRoll < wicketChance + 0.10) {
+      // Outside / top edge — deflects to the boundary (less common than pure fortune would suggest)
       result = "four";
       runsScored = 4;
       shotAngle = isOffSideDelivery
@@ -313,12 +376,13 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
         result = "four"; runsScored = 4;
       }
     } else {
-      // GAP — no fielder in this zone, death batsmen DESTROY gaps
+      // GAP — no fielder in this zone. Gaps produce runs, mostly fours.
+      // A six requires clearing the rope AND the ball being in the air — gaps alone don't guarantee maximums.
       const gapRoll = rng();
-      const aggBonus = batsman.aggression * 0.25;
-      const sixProb  = 0.40 + aggBonus;           // 40–65% six in a gap
-      const fourProb = sixProb + 0.30;             // next 30% = four
-      // boundaryProb ~70–95% — leaving gaps in death is suicide
+      const aggBonus = batsman.aggression * 0.18;
+      const sixProb  = 0.22 + aggBonus;           // 22–40% six in a gap (needs real aggression)
+      const fourProb = sixProb + 0.38;             // next 38% = four (most gaps = boundary run)
+      // boundaryProb 60–78% — leaving gaps in death is still costly, but not automatic maximums
 
       if (gapRoll < sixProb) {
         result = "six"; runsScored = 6;
@@ -330,6 +394,18 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
         result = "two"; runsScored = 2;
       }
     }
+  }
+
+  // ==============================================================
+  // STEP 12a: Free hit / no-ball — batsman CANNOT be dismissed (run out aside)
+  // If this ball is a free hit (previous ball was no-ball) or IS a no-ball,
+  // cancel any wicket and treat it as a dot (ball reached fielder, not out).
+  // ==============================================================
+  if ((isFreeBit || isNoBall) && isWicket) {
+    isWicket = false;
+    result = "dot";
+    runsScored = 0;
+    // isCaught defaults to false (declared below) and won't be set since isWicket is now false
   }
 
   // ==============================================================
@@ -537,6 +613,27 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
 
 
   // ==============================================================
+  // STEP 13b: No-ball post-processing
+  // Foot fault adds 1 penalty run on top of whatever was scored.
+  // chaosEvent becomes "no_ball" so feedback/UI shows the correct narrative.
+  // ==============================================================
+  let isExtraDelivery = false;
+  let triggersFreeHit = false;
+
+  if (isNoBall) {
+    runsScored += 1;
+    // Update result label to reflect new total
+    if (runsScored >= 6) result = "six";
+    else if (runsScored >= 4) result = "four";
+    else if (runsScored === 3) result = "three";
+    else if (runsScored === 2) result = "two";
+    else if (runsScored === 1) result = "single";
+    chaosEvent = "no_ball";
+    isExtraDelivery = true;
+    triggersFreeHit = true;
+  }
+
+  // ==============================================================
   // STEP 14: Feedback message
   // ==============================================================
   const feedbackMessage = generateFeedbackMessage({
@@ -570,6 +667,8 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     chaosEvent,
     shotDirection: { angle: shotAngle, distance: shotDistance },
     feedbackMessage,
+    isExtraDelivery,
+    triggersFreeHit,
   };
 }
 
@@ -618,6 +717,8 @@ export function generateEmojiSummary(
   });
 
   const emojis = ballLog.map((ball) => {
+    if (ball.chaosEvent === "wide") return "📣";
+    if (ball.chaosEvent === "no_ball") return "🚫";
     if (ball.isWicket) return "🎯";
     if (ball.chaosEvent === "dropped_catch") return "⚡";
     if (ball.chaosEvent === "overthrow") return "🌀";

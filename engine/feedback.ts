@@ -57,6 +57,8 @@ const CHAOS_MESSAGES: Record<NonNullable<ChaosEvent>, string> = {
   overthrow:       "The fielder's throw deflects off the stumps — overthrow! An extra run sneaks through.",
   misfield:        "A misfield in the ring lets them steal a run from nothing.",
   stumping_missed: "The batsman was lured out of the crease but the keeper couldn't collect cleanly — a narrow escape!",
+  wide:            "Wide! The umpire's arm extends — an extra run is added and you must bowl this ball again.",
+  no_ball:         "No-ball! Foot over the crease — a free run is added and the next delivery is a FREE HIT.",
 };
 
 
@@ -102,6 +104,21 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
     shotAngle,
     chaosEvent,
   } = params;
+
+  // Wide / no-ball: skip the tactical bluff/expectation narrative entirely
+  if (chaosEvent === "wide") {
+    const lName = LINE_NAMES[deliveryLine];
+    return deliveryLength === "yorker"
+      ? `Wide! The yorker on ${lName} strayed too far — umpire's arm goes out. Extra run, bowl again.`
+      : deliveryLength === "bouncer"
+      ? `Wide! The bouncer on ${lName} was adjudged wide — too far from the batsman's body. Extra run, bowl again.`
+      : `Wide called on ${lName}! The ball drifted outside the tramline. Extra run, bowl again.`;
+  }
+  if (chaosEvent === "no_ball") {
+    const dName = describeDelivery(deliveryLength, deliveryVariation);
+    const lName = LINE_NAMES[deliveryLine];
+    return `No-ball! The ${dName} on ${lName} — foot over the crease. Free run added. Next delivery is a FREE HIT — the batsman cannot be dismissed!`;
+  }
 
   const parts: string[] = [];
   const dName       = describeDelivery(deliveryLength, deliveryVariation);

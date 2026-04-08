@@ -42,6 +42,9 @@ export default function HomePage() {
   const startGame = useGameStore((s) => s.startGame);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCustom, setShowCustom] = useState(false);
+  const [customTarget, setCustomTarget] = useState(12);
+  const [customWickets, setCustomWickets] = useState(3);
 
   const handleDailyChallenge = async () => {
     setLoading(true);
@@ -61,8 +64,9 @@ export default function HomePage() {
 
   const handleCustomGame = () => {
     startGame({
-      target: 12,
+      target: customTarget,
       totalBalls: 6,
+      wicketsRemaining: customWickets,
       batsmanArchetype: "aggressive",
       batsmanName: "Power Hitter",
       nonStrikerArchetype: "accumulator",
@@ -126,21 +130,76 @@ export default function HomePage() {
           </p>
         )}
 
-        <button
-          onClick={handleCustomGame}
-          className="w-full py-3.5 rounded-2xl font-mono text-sm tracking-widest text-center"
-          style={{
-            background: "#ffffff05",
-            border: "1px solid #1e3d2a",
-            color: "#6b8c76",
-            cursor: "pointer",
-          }}
+        <div
+          className="w-full rounded-2xl overflow-hidden"
+          style={{ border: "1px solid #1e3d2a", background: "#ffffff05" }}
         >
-          CUSTOM GAME
-          <span className="block text-xs mt-0.5" style={{ color: "#4a7a5a" }}>
-            Set your own target and overs
-          </span>
-        </button>
+          <button
+            onClick={() => setShowCustom((v) => !v)}
+            className="w-full py-3.5 font-mono text-sm tracking-widest text-center"
+            style={{ color: "#6b8c76", cursor: "pointer", background: "transparent", border: "none" }}
+          >
+            CUSTOM GAME
+            <span className="block text-xs mt-0.5" style={{ color: "#4a7a5a" }}>
+              {showCustom ? "Hide options ▲" : "Set your own target ▼"}
+            </span>
+          </button>
+
+          {showCustom && (
+            <div className="px-5 pb-5 flex flex-col gap-4" style={{ borderTop: "1px solid #1e3d2a" }}>
+              {/* Target runs */}
+              <div className="flex flex-col gap-2 pt-4">
+                <div className="flex justify-between items-center font-mono text-xs" style={{ color: "#6b8c76" }}>
+                  <span>RUNS TO DEFEND</span>
+                  <span style={{ color: "#00d4ff", fontSize: 18, fontWeight: "bold" }}>{customTarget}</span>
+                </div>
+                <input
+                  type="range"
+                  min={6}
+                  max={36}
+                  value={customTarget}
+                  onChange={(e) => setCustomTarget(Number(e.target.value))}
+                  className="w-full accent-cyan-400"
+                />
+                <div className="flex justify-between font-mono text-[10px]" style={{ color: "#4a7a5a" }}>
+                  <span>6</span><span>36</span>
+                </div>
+              </div>
+
+              {/* Wickets remaining */}
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-center font-mono text-xs" style={{ color: "#6b8c76" }}>
+                  <span>WICKETS IN HAND</span>
+                  <span style={{ color: "#00d4ff", fontSize: 18, fontWeight: "bold" }}>{customWickets}</span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  value={customWickets}
+                  onChange={(e) => setCustomWickets(Number(e.target.value))}
+                  className="w-full accent-cyan-400"
+                />
+                <div className="flex justify-between font-mono text-[10px]" style={{ color: "#4a7a5a" }}>
+                  <span>1</span><span>10</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleCustomGame}
+                className="w-full py-3 rounded-xl font-mono font-bold text-sm tracking-widest"
+                style={{
+                  background: "linear-gradient(135deg, #1e3d2a, #2a5a3a)",
+                  border: "1px solid #3a7a4a",
+                  color: "#00d4ff",
+                  cursor: "pointer",
+                }}
+              >
+                START GAME
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* How it works */}
