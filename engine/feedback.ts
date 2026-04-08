@@ -25,6 +25,8 @@ interface FeedbackParams {
   chaosEvent: ChaosEvent;
   batsman: BatsmanProfile;
   fielders: Fielder[];
+  /** How the ball made contact — drives shot description in the feedback narrative */
+  contactType: string;
 }
 
 const LENGTH_NAMES: Record<DeliveryLength, string> = {
@@ -75,10 +77,23 @@ function areSimilarLengths(a: DeliveryLength, b: DeliveryLength): boolean {
   return shortPitched.includes(a) && shortPitched.includes(b);
 }
 
-/** Shot verb appropriate to the delivery — used in run descriptions */
-function shotVerb(length: DeliveryLength, line: DeliveryLine): string {
+/** Shot verb derived from delivery type and direction — fallback for clean contact */
+function shotVerbFromDelivery(length: DeliveryLength, line: DeliveryLine, angle?: number): string {
   const isLeg = line === "leg" || line === "wide_outside_leg";
   const isOff = line === "off" || line === "wide_outside_off";
+
+  if (angle !== undefined) {
+    // Ball went backward of the stumps on off/middle — must be an edge regardless of length
+    const isBehindWicket = angle >= 157.5 && angle < 202.5;
+    if (isBehindWicket && !isLeg) return "edged";
+
+    // Short ball to the pull/hook zone (mid-wicket → square leg): not a glance or a slap
+    const isPullZone = angle >= 22.5 && angle < 112.5;
+    if ((length === "bouncer" || length === "short") && isPullZone) {
+      return length === "bouncer" ? "hooked" : "pulled";
+    }
+  }
+
   if (length === "yorker")                          return "squeezed";
   if (length === "bouncer" || length === "short") {
     if (isLeg)  return "glanced";
@@ -87,6 +102,42 @@ function shotVerb(length: DeliveryLength, line: DeliveryLine): string {
   }
   if (length === "full")  return isLeg ? "flicked" : "driven";
   return "nudged"; // good_length
+}
+
+/** Zone-aware tactical tip mapping a shot angle to the specific fielder that would plug the gap */
+function zoneTacticalTip(angle: number, deep: boolean): string {
+  const d = deep ? "deep " : "";
+  if (angle < 22.5 || angle >= 337.5)
+    return `Tip: Straight boundary was exposed — a ${d}long-on or long-off would plug that gap.`;
+  if (angle < 67.5)
+    return `Tip: Mid-wicket was the gap — a ${d}mid-wicket or wider mid-on would have cut that off.`;
+  if (angle < 112.5)
+    return `Tip: Square leg was exposed — a ${d}square leg or backward square leg would have saved that.`;
+  if (angle < 157.5)
+    return `Tip: Fine leg region was unguarded — a ${d}fine leg or deep backward square leg covers there.`;
+  if (angle < 180)
+    return `Tip: Fine leg was the gap — a ${d}fine leg would have saved those runs.`;
+  if (angle < 202.5)
+    return `Tip: Third man was vacant — a ${d}third man or deep gully would cut off balls going there.`;
+  if (angle < 247.5)
+    return `Tip: Cover drive region was exposed — a cover point or ${d}extra cover would have helped.`;
+  if (angle < 292.5)
+    return `Tip: Point was the gap — a ${d}point or backward point would have cut that off.`;
+  return `Tip: Off side channel was exposed — a ${d}cover point or mid-off in that region would have saved it.`;
+}
+
+/** Shot verb that reflects HOW the ball was actually struck */
+function shotVerb(contactType: string, length: DeliveryLength, line: DeliveryLine, angle?: number): string {
+  switch (contactType) {
+    case "edged_off":   return "edged";
+    case "edged_leg":   return "inside edged";
+    case "top_edge":    return "top edged";
+    case "scoop":       return "scooped";
+    case "pull":        return "pulled";
+    case "upper_cut":   return "upper cut";
+    case "lofted_slog": return "heaved";
+    default:            return shotVerbFromDelivery(length, line, angle);
+  }
 }
 
 export function generateFeedbackMessage(params: FeedbackParams): string {
@@ -103,6 +154,7 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
     coverage,
     shotAngle,
     chaosEvent,
+    contactType,
   } = params;
 
   // Wide / no-ball: skip the tactical bluff/expectation narrative entirely
@@ -249,32 +301,76 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
 
     parts.push(wicketDesc);
   } else if (runsScored >= 6) {
-    parts.push(
-      coverage < 0.3
-        ? `A massive heave ${direction} — no fielder anywhere near that zone.`
-        : coverage < 0.6
-        ? `The batsman got underneath it and cleared the rope over the deep fielder!`
-        : `Pure power — cleared the boundary despite a well-set field.`
-    );
+    switch (contactType) {
+      case "scoop":
+        parts.push(`Scooped over fine leg — brilliant improvisation! Six!`);
+        break;
+      case "pull":
+        parts.push(`Pulled high over the leg-side boundary — right in the slot. Six!`);
+        break;
+      case "upper_cut":
+        parts.push(`Audacious upper cut over third man — cleared the rope with ease. Six!`);
+        break;
+      case "lofted_slog":
+        parts.push(
+          coverage < 0.3
+            ? `Heaved ${direction} — no fielder anywhere near that zone. Six!`
+            : `Pure power — the slog cleared the boundary despite a fielder back. Six!`
+        );
+        break;
+      case "edged_off":
+        parts.push(`Outside edge flies over the keeper — a lucky six, but it counts!`);
+        break;
+      case "edged_leg":
+        parts.push(`Inside edge ricochets over fine leg — streaky but six!`);
+        break;
+      default:
+        parts.push(
+          coverage < 0.3
+            ? `A massive hit ${direction} — no fielder anywhere near that zone. Six!`
+            : coverage < 0.6
+            ? `The batsman got underneath it and cleared the rope over the deep fielder!`
+            : `Pure power — cleared the boundary despite a well-set field.`
+        );
+    }
   } else if (runsScored >= 4) {
-    const verb = shotVerb(deliveryLength, deliveryLine);
-    if (coverage < 0.3) {
-      parts.push(
-        `${verb.charAt(0).toUpperCase() + verb.slice(1)} ${direction} — a glaring gap and the batsman found it perfectly. Four runs.`
-      );
-    } else {
-      parts.push(
-        `The fielder was there but couldn't get down quickly enough. Four runs.`
-      );
+    const verb = shotVerb(contactType, deliveryLength, deliveryLine, shotAngle);
+    switch (contactType) {
+      case "edged_off":
+        parts.push(`Outside edge flies ${direction} — a fortunate four through to the boundary.`);
+        break;
+      case "edged_leg":
+        parts.push(`Inside edge deflects fine ${direction} — a streaky four.`);
+        break;
+      case "upper_cut":
+        parts.push(`Upper cut over backward point ${direction} — perfectly placed. Four runs.`);
+        break;
+      case "scoop":
+        parts.push(`Scooped over fine leg ${direction} — improvised perfectly. Four runs.`);
+        break;
+      case "pull":
+        parts.push(`Pulled ${direction} — timed well and it raced away. Four runs.`);
+        break;
+      default:
+        if (coverage < 0.3) {
+          parts.push(
+            `${verb.charAt(0).toUpperCase() + verb.slice(1)} ${direction} — a glaring gap and the batsman found it perfectly. Four runs.`
+          );
+        } else {
+          parts.push(`The fielder was there but couldn't get down quickly enough. Four runs.`);
+        }
     }
   } else if (runsScored >= 2) {
+    const verb = shotVerb(contactType, deliveryLength, deliveryLine, shotAngle);
     parts.push(
       coverage > 0.5
         ? `Good fielding restricted it to ${runsScored} — well set but couldn't prevent the run.`
+        : contactType !== "clean"
+        ? `${verb.charAt(0).toUpperCase() + verb.slice(1)} ${direction} — ${runsScored} runs.`
         : `The ball bisected the fielders — ${runsScored} runs.`
     );
   } else if (runsScored === 1) {
-    const verb = shotVerb(deliveryLength, deliveryLine);
+    const verb = shotVerb(contactType, deliveryLength, deliveryLine, shotAngle);
     parts.push(
       coverage > 0.7
         ? `Excellent fielding — the batsman could only scramble a single.`
@@ -300,10 +396,22 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
 
   // --- Tactical hint (only on boundaries / big hits where there was a gap) ---
   if (runsScored >= 4 && !chaosEvent && coverage < 0.35) {
-    const direction2 = angleToDirectionLabel(shotAngle);
-    parts.push(
-      `Tip: Consider placing a fielder ${direction2} — that gap cost you dearly.`
-    );
+    const isSix = runsScored >= 6;
+    if (contactType === "edged_off") {
+      parts.push(`Tip: Outside edge flew through the off side — a slip cordon or third man would have been the answer.`);
+    } else if (contactType === "edged_leg") {
+      parts.push(`Tip: That inside edge went fine — a fine leg or leg slip would have been dangerous there.`);
+    } else if (contactType === "upper_cut") {
+      parts.push(`Tip: The batsman upper cut over backward point — a third man or deep backward point would have saved that.`);
+    } else if (contactType === "scoop") {
+      parts.push(`Tip: The batsman scooped over fine leg — a deeper fine leg could cut that off.`);
+    } else if (contactType === "pull") {
+      parts.push(`Tip: Pull shot found the gap — a ${isSix ? "deep " : ""}mid-wicket or square leg would threaten that shot next time.`);
+    } else if (contactType === "top_edge") {
+      parts.push(`Tip: Top edge sailed over the keeper — a fine leg or long stop would have saved those runs.`);
+    } else {
+      parts.push(zoneTacticalTip(shotAngle, isSix));
+    }
   }
 
   return parts.join(" ");

@@ -16,6 +16,9 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "The Death Over Challenge",
   description: "A 2D cricket tactical simulator. Defend your total in the final over.",
+  icons: {
+    icon: "/logo.svg",
+  },
   openGraph: {
     title: "The Death Over Challenge",
     description: "Can you defend it? Set your field, pick your delivery, survive the death over.",

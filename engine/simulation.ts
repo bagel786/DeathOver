@@ -272,6 +272,9 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
   let result: BallResult = "dot";
   let runsScored = 0;
   let isWicket = false;
+  // How the ball was struck — used by feedback to describe the shot accurately
+  // "clean" | "edged_off" | "edged_leg" | "top_edge" | "scoop" | "pull" | "upper_cut" | "lofted_slog"
+  let contactType = "clean";
 
   if (roll > contactProb) {
     // --- Poor contact / miss ---
@@ -297,24 +300,36 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
         // Full/good length → lofted leg-side slog (20°-80°) or straight (340°-20°)
         if (deliveryLength === "yorker") {
           shotAngle = 128 + rng() * 82; // scoop / ramp: fine leg through keeper area
+          contactType = "scoop";
         } else if (deliveryLength === "bouncer" || deliveryLength === "short") {
-          shotAngle = rng() < 0.75
-            ? 70 + rng() * 65   // pull/hook: mid-wicket through fine leg
-            : 200 + rng() * 40; // upper-cut: third man / gully
+          if (rng() < 0.75) {
+            shotAngle = 70 + rng() * 65;   // pull/hook: mid-wicket through fine leg
+            contactType = "pull";
+          } else {
+            shotAngle = 200 + rng() * 40;  // upper-cut: third man / gully
+            contactType = "upper_cut";
+          }
         } else {
           shotAngle = rng() < 0.5 ? (340 + rng() * 40) % 360 : 20 + rng() * 60; // straight or leg-side slog
+          contactType = "lofted_slog";
         }
         shotDistance = 1.0;
       } else {
         result = "four"; runsScored = 4;
         if (deliveryLength === "yorker") {
           shotAngle = 128 + rng() * 82; // scoop / ramp to the boundary
+          contactType = "scoop";
         } else if (deliveryLength === "bouncer" || deliveryLength === "short") {
-          shotAngle = rng() < 0.75
-            ? 70 + rng() * 65
-            : 200 + rng() * 40;
+          if (rng() < 0.75) {
+            shotAngle = 70 + rng() * 65;
+            contactType = "pull";
+          } else {
+            shotAngle = 200 + rng() * 40;
+            contactType = "upper_cut";
+          }
         } else {
           shotAngle = rng() < 0.5 ? (340 + rng() * 40) % 360 : 20 + rng() * 60;
+          contactType = "lofted_slog";
         }
         shotDistance = 0.90 + rng() * 0.08;
       }
@@ -327,9 +342,13 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       // Outside / top edge — deflects to the boundary (less common than pure fortune would suggest)
       result = "four";
       runsScored = 4;
-      shotAngle = isOffSideDelivery
-        ? 200 + rng() * 30  // third man region (200°-230°)
-        : 120 + rng() * 30; // fine leg region (120°-150°)
+      if (isOffSideDelivery) {
+        shotAngle = 200 + rng() * 30;  // third man region (200°-230°)
+        contactType = "edged_off";
+      } else {
+        shotAngle = 120 + rng() * 30;  // fine leg region (120°-150°)
+        contactType = "edged_leg";
+      }
       shotDistance = 0.88 + rng() * 0.08;
     } else if (missRoll < wicketChance + 0.55) {
       // Squeezed / dug out for a single or two — batsmen in death always look to rotate
@@ -651,6 +670,7 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     chaosEvent,
     batsman,
     fielders,
+    contactType,
   });
 
   return {

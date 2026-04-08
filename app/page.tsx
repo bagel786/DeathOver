@@ -80,6 +80,13 @@ export default function HomePage() {
       className="min-h-screen flex flex-col items-center justify-center gap-8 p-6"
       style={{ background: "#000000" }}
     >
+      {/* Logo */}
+      <img
+        src="/logo.svg"
+        alt="The Death Over"
+        style={{ width: "clamp(80px, 16vw, 130px)", height: "auto", display: "block", margin: "0 auto" }}
+      />
+
       {/* Title */}
       <div className="text-center">
         <h1
