@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "score must be a non-negative integer" }, { status: 400 });
   }
 
-  if (typeof body.emoji_summary !== "string" || body.emoji_summary.length > 50) {
-    return NextResponse.json({ error: "emoji_summary must be a string under 50 characters" }, { status: 400 });
+  if (typeof body.emoji_summary !== "string" || body.emoji_summary.length > 300) {
+    return NextResponse.json({ error: "emoji_summary must be a string under 300 characters" }, { status: 400 });
   }
 
   if (!Array.isArray(body.ball_log) || body.ball_log.length > 10) {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useGameStore } from "@/store/gameStore";
 import { generateEmojiSummary, calculateScore } from "@/engine/simulation";
@@ -94,16 +94,7 @@ export default function ResultScreen() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = emoji;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      // clipboard API unavailable — nothing to fall back to cleanly
     }
   };
 
@@ -132,7 +123,7 @@ export default function ResultScreen() {
 
       {/* Stats */}
       <div
-        className="grid grid-cols-4 gap-4 p-6 rounded-2xl w-full"
+        className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-6 rounded-2xl w-full"
         style={{ background: "#111a14", border: "1px solid #1e3d2a" }}
       >
         <StatCard label="RUNS GIVEN" value={match.runsConceded} />
