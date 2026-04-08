@@ -210,7 +210,12 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
 
   // --- Helper: find nearest fielder to a specific angle ---
   function getNearestFielder(targetAngle: number): string {
-    let closest = "fielder";
+    return getNearestFielderData(targetAngle).name;
+  }
+
+  function getNearestFielderData(targetAngle: number): { name: string; isDeep: boolean } {
+    let name = "fielder";
+    let isDeep = false;
     let minDiff = Infinity;
 
     for (const f of params.fielders) {
@@ -221,10 +226,11 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
       );
       if (angleDiff < minDiff) {
         minDiff = angleDiff;
-        closest = f.label || "fielder";
+        name = f.label || "fielder";
+        isDeep = fPolar.distance >= 0.55;
       }
     }
-    return closest;
+    return { name, isDeep };
   }
 
   // --- Outcome line ---
@@ -259,7 +265,9 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
       } else if (wideLeg) {
         wicketDesc = "Tried to duck under the bouncer — gloved it through to the keeper. Caught!";
       } else {
-        wicketDesc = "The bouncer got the top edge — straight up, caught in the deep!";
+        const topEdgeFielder = getNearestFielderData(90); // square leg / fine leg area for top edge on bouncer
+        const topEdgeLocation = topEdgeFielder.isDeep ? "in the deep" : "in the circle";
+        wicketDesc = `The bouncer got the top edge — straight up, caught ${topEdgeLocation} by ${topEdgeFielder.name}!`;
       }
     } else if (deliveryLength === "full") {
       if (wideOff) {
@@ -295,8 +303,9 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
       } else if (wideLeg) {
         wicketDesc = "Tried to duck — gloved it through to the keeper. Caught!";
       } else {
-        const closestFielder = getNearestFielder(90); // square leg area
-        wicketDesc = `Mistimed the pull shot — straight to ${closestFielder}. Caught in the deep!`;
+        const pullFielder = getNearestFielderData(90); // square leg area
+        const pullLocation = pullFielder.isDeep ? "Caught in the deep!" : "Caught inside the circle!";
+        wicketDesc = `Mistimed the pull shot — straight to ${pullFielder.name}. ${pullLocation}`;
       }
     }
 

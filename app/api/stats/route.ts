@@ -13,6 +13,11 @@
  * GET  /api/stats                → { total_plays, unique_users }
  * POST /api/stats  { anonymous_user_id, is_daily, result }
  *                                → 201 created
+ *
+ * Also requires:
+ *   CREATE TABLE players (
+ *     display_name text PRIMARY KEY   -- lowercased username, persists across daily resets
+ *   );
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -24,16 +29,20 @@ const supabase = createClient(
 );
 
 export async function GET() {
-  const { data, error } = await supabase
-    .from("game_sessions")
-    .select("id, anonymous_user_id");
+  const [sessionsRes, playersRes] = await Promise.all([
+    supabase.from("game_sessions").select("id", { count: "exact", head: true }),
+    supabase.from("players").select("display_name", { count: "exact", head: true }),
+  ]);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (sessionsRes.error) {
+    return NextResponse.json({ error: sessionsRes.error.message }, { status: 500 });
+  }
+  if (playersRes.error) {
+    return NextResponse.json({ error: playersRes.error.message }, { status: 500 });
   }
 
-  const total_plays = data.length;
-  const unique_users = new Set(data.map((r) => r.anonymous_user_id)).size;
+  const total_plays = sessionsRes.count ?? 0;
+  const unique_users = playersRes.count ?? 0;
 
   return NextResponse.json({ total_plays, unique_users });
 }

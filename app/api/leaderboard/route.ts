@@ -93,5 +93,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Persist username into players table (survives daily leaderboard resets)
+  await supabase
+    .from("players")
+    .upsert({ display_name: displayName.toLowerCase() }, { onConflict: "display_name", ignoreDuplicates: true });
+
   return NextResponse.json(data);
 }
