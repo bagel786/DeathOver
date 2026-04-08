@@ -58,8 +58,8 @@ function generateChallenge(date: string) {
   const wicketsRemaining = 1 + Math.floor(rng() * 10);
   // Confidence between 50-80
   const confidence = 50 + Math.floor(rng() * 31);
-  // RNG seed for the game engine
-  const rngSeed = Math.floor(rng() * 0xffffffff);
+  // RNG seed for the game engine — capped to PostgreSQL integer max (2^31 - 1)
+  const rngSeed = Math.floor(rng() * 0x7fffffff);
 
   return {
     date,
