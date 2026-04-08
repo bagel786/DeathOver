@@ -64,6 +64,7 @@ export type ChaosEvent =
   | "overthrow"
   | "misfield"
   | "stumping_missed"
+  | "spectacular_catch"
   | "wide"
   | "no_ball"
   | null;
@@ -140,7 +141,7 @@ export interface MatchState {
   isComplete: boolean;
   result: GameResult;
   /** True when the previous delivery was a no-ball — next ball is a free hit */
-  nextBallIsFreeBit: boolean;
+  nextBallIsFreeHit: boolean;
 }
 
 // --- Batsman in Match ---

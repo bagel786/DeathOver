@@ -61,7 +61,7 @@ function buildDefaultMatch(
     wicketsRemaining,
     isComplete: false,
     result: "pending" as GameResult,
-    nextBallIsFreeBit: false,
+    nextBallIsFreeHit: false,
   };
 }
 
@@ -243,7 +243,7 @@ export const useGameStore = create<GameStore>()(
         baseSeed: daily?.seed ?? null,
         rngCallCount,
         lastVariation,
-        isFreeBit: match.nextBallIsFreeBit,
+        isFreeHit: match.nextBallIsFreeHit,
       });
 
       set((draft) => {
@@ -258,7 +258,7 @@ export const useGameStore = create<GameStore>()(
           draft.match.ballsBowled += 1;
         }
         // Track whether the next ball is a free hit
-        draft.match.nextBallIsFreeBit = outcome.triggersFreeHit;
+        draft.match.nextBallIsFreeHit = outcome.triggersFreeHit;
 
         // Extra deliveries (wide/no-ball) don't affect striker's faced count or confidence
         if (outcome.isExtraDelivery) {
@@ -297,6 +297,18 @@ export const useGameStore = create<GameStore>()(
             draft.batsman.confidence = Math.min(100, draft.batsman.confidence + 8);
           } else {
             draft.batsman.confidence = Math.max(0, draft.batsman.confidence - 5);
+          }
+
+          // Rotate strike on odd runs (1 or 3) — batsmen cross ends
+          if (outcome.runsScored % 2 === 1) {
+            const s = draft.batsman;
+            const ns = draft.nonStriker;
+            // Swap all fields explicitly (Immer requires direct mutation, not reassignment)
+            const tmpArchetype = s.archetype; s.archetype = ns.archetype; ns.archetype = tmpArchetype;
+            const tmpName = s.name; s.name = ns.name; ns.name = tmpName;
+            const tmpConf = s.confidence; s.confidence = ns.confidence; ns.confidence = tmpConf;
+            const tmpBalls = s.ballsFaced; s.ballsFaced = ns.ballsFaced; ns.ballsFaced = tmpBalls;
+            const tmpRuns = s.runsScored; s.runsScored = ns.runsScored; ns.runsScored = tmpRuns;
           }
         }
 

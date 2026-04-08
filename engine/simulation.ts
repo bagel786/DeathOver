@@ -41,7 +41,7 @@ export interface DeliveryInput {
   /** Last variation bowled (for AI pattern reading) */
   lastVariation: DeliveryVariation | null;
   /** True when the previous ball was a no-ball — batsman cannot be dismissed this delivery */
-  isFreeBit: boolean;
+  isFreeHit: boolean;
 }
 
 // ==============================================================
@@ -106,7 +106,7 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     baseSeed,
     rngCallCount,
     lastVariation,
-    isFreeBit,
+    isFreeHit,
   } = input;
 
   // Create a deterministic RNG for this ball
@@ -420,7 +420,7 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
   // If this ball is a free hit (previous ball was no-ball) or IS a no-ball,
   // cancel any wicket and treat it as a dot (ball reached fielder, not out).
   // ==============================================================
-  if ((isFreeBit || isNoBall) && isWicket) {
+  if ((isFreeHit || isNoBall) && isWicket) {
     isWicket = false;
     result = "dot";
     runsScored = 0;
@@ -630,9 +630,38 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     // else: no chaos fires — a valid chaos roll that didn't meet any condition
   }
 
+  // ==============================================================
+  // STEP 13b: Spectacular catch on the rope (~6% of sixes)
+  // A ball heading over the boundary is taken by a deep fielder at the rope.
+  // Fires independently of the main chaos window — sixes are already rare enough.
+  // Does not trigger on free hits or no-balls (batsman protected).
+  // ==============================================================
+  if (result === "six" && !isFreeHit && !isNoBall && !chaosEvent) {
+    const catchRoll = rng();
+    if (catchRoll < 0.06) {
+      chaosEvent = "spectacular_catch";
+      result = "wicket";
+      runsScored = 0;
+      isWicket = true;
+      isCaught = true;
+      // Direct the animation toward the nearest deep fielder on the rope
+      const deepFielderPolars = fielders
+        .map((f) => cartesianToPolar(f.position.x, f.position.y))
+        .filter((f) => f.distance > 0.65);
+      if (deepFielderPolars.length > 0) {
+        const nearest = deepFielderPolars.reduce((best, f) =>
+          angDiff(f.angle, shotAngle) < angDiff(best.angle, shotAngle) ? f : best
+        );
+        shotAngle = nearest.angle;
+        shotDistance = nearest.distance * 0.97; // ball reaches the fielder on the rope
+      } else {
+        shotDistance = 0.95; // no deep fielder placed, ball lands on the rope anyway
+      }
+    }
+  }
 
   // ==============================================================
-  // STEP 13b: No-ball post-processing
+  // STEP 13d: No-ball post-processing
   // Foot fault adds 1 penalty run on top of whatever was scored.
   // chaosEvent becomes "no_ball" so feedback/UI shows the correct narrative.
   // ==============================================================
@@ -739,6 +768,7 @@ export function generateEmojiSummary(
   const emojis = ballLog.map((ball) => {
     if (ball.chaosEvent === "wide") return "📣";
     if (ball.chaosEvent === "no_ball") return "🚫";
+    if (ball.chaosEvent === "spectacular_catch") return "🤩";
     if (ball.isWicket) return "🎯";
     if (ball.chaosEvent === "dropped_catch") return "⚡";
     if (ball.chaosEvent === "overthrow") return "🌀";

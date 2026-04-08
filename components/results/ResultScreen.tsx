@@ -6,6 +6,19 @@ import { useGameStore } from "@/store/gameStore";
 import { generateEmojiSummary, calculateScore } from "@/engine/simulation";
 import type { BallOutcome, LeaderboardEntry } from "@/types/game";
 
+/** Returns a persistent anonymous user ID stored in localStorage. */
+function getOrCreateUserId(): string {
+  if (typeof window === "undefined") return "ssr";
+  const KEY = "deathoverId";
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    // Simple UUID-v4-ish without crypto dependency
+    id = "u-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 9);
+    localStorage.setItem(KEY, id);
+  }
+  return id;
+}
+
 export default function ResultScreen() {
   const match = useGameStore((s) => s.match);
   const ballLog = useGameStore((s) => s.ballLog);
@@ -34,6 +47,20 @@ export default function ResultScreen() {
     match.totalBalls,
     result
   );
+
+  // Record this play once on mount
+  useEffect(() => {
+    fetch("/api/stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        anonymous_user_id: getOrCreateUserId(),
+        is_daily: isDaily,
+        result,
+      }),
+    }).catch(() => { /* non-critical — ignore failures */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchLeaderboard = useCallback(async () => {
     if (!isDaily) return;

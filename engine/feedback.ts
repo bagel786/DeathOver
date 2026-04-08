@@ -55,12 +55,13 @@ const LINE_NAMES: Record<DeliveryLine, string> = {
 };
 
 const CHAOS_MESSAGES: Record<NonNullable<ChaosEvent>, string> = {
-  dropped_catch:   "But the fielder grassed it! A massive reprieve for the batting side.",
-  overthrow:       "The fielder's throw deflects off the stumps — overthrow! An extra run sneaks through.",
-  misfield:        "A misfield in the ring lets them steal a run from nothing.",
-  stumping_missed: "The batsman was lured out of the crease but the keeper couldn't collect cleanly — a narrow escape!",
-  wide:            "Wide! The umpire's arm extends — an extra run is added and you must bowl this ball again.",
-  no_ball:         "No-ball! Foot over the crease — a free run is added and the next delivery is a FREE HIT.",
+  dropped_catch:     "But the fielder grassed it! A massive reprieve for the batting side.",
+  overthrow:         "The fielder's throw deflects off the stumps — overthrow! An extra run sneaks through.",
+  misfield:          "A misfield in the ring lets them steal a run from nothing.",
+  stumping_missed:   "The batsman was lured out of the crease but the keeper couldn't collect cleanly — a narrow escape!",
+  spectacular_catch: "TAKEN ON THE ROPE! The fielder leapt at the boundary and clung on — that was heading for six but it's a stunning dismissal!",
+  wide:              "Wide! The umpire's arm extends — an extra run is added and you must bowl this ball again.",
+  no_ball:           "No-ball! Foot over the crease — a free run is added and the next delivery is a FREE HIT.",
 };
 
 

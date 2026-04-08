@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
 import type { DailyChallenge } from "@/types/game";
 
@@ -45,6 +45,14 @@ export default function HomePage() {
   const [showCustom, setShowCustom] = useState(false);
   const [customTarget, setCustomTarget] = useState(12);
   const [customWickets, setCustomWickets] = useState(3);
+  const [stats, setStats] = useState<{ total_plays: number; unique_users: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setStats(d); })
+      .catch(() => {});
+  }, []);
 
   const handleDailyChallenge = async () => {
     setLoading(true);
@@ -208,6 +216,15 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {/* Play stats */}
+      {stats && (
+        <p className="font-mono text-xs text-center" style={{ color: "#4a7a5a" }}>
+          <span style={{ color: "#6b8c76" }}>{stats.total_plays.toLocaleString()}</span> games played
+          {" · "}
+          <span style={{ color: "#6b8c76" }}>{stats.unique_users.toLocaleString()}</span> players
+        </p>
+      )}
 
       {/* How it works */}
       <div
