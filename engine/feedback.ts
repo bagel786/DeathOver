@@ -356,7 +356,13 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
     const verb = shotVerb(contactType, deliveryLength, deliveryLine, shotAngle);
     switch (contactType) {
       case "edged_off":
-        parts.push(`Outside edge flies ${direction} — a fortunate four through to the boundary.`);
+        if (deliveryLength === "yorker") {
+          parts.push(`Dug out onto the outside edge — races away ${direction} to the boundary. A lucky four!`);
+        } else if (deliveryLength === "good_length" || deliveryLength === "short") {
+          parts.push(`Outside edge flies ${direction} — a fortuitous four to the boundary.`);
+        } else {
+          parts.push(`Outside edge flies ${direction} — a fortunate four through to the boundary.`);
+        }
         break;
       case "edged_leg": {
         let edgeLegDesc: string;

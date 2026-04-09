@@ -356,7 +356,7 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       result = "four";
       runsScored = 4;
       if (isOffSideDelivery) {
-        shotAngle = 200 + rng() * 30;  // third man region (200°-230°)
+        shotAngle = 205 + rng() * 25;  // gully / third man (205°-230°) — stays behind square on the off side
         contactType = "edged_off";
       } else {
         shotAngle = 120 + rng() * 30;  // fine leg region (120°-150°)
@@ -550,31 +550,39 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       // If no fielder within ±90°, keep the original angle (rare but possible)
 
     } else if (result === "four") {
-      // Find the largest gap near the original shot direction (within ±90°)
-      // so the four goes in a realistic direction relative to the delivery line
-      const nearbyAngles = fielderPolars
-        .map((p) => p.angle)
-        .filter((a) => angDiff(a, originalAngle) < 90);
+      // Edges have their own physics — the ball deflects to a fixed zone determined by
+      // where bat met ball, not by where the gap is. Skip gap-finding for edges so the
+      // tracer line and direction label stay in the correct region (gully/third man for
+      // edged_off; fine leg for edged_leg) rather than being pulled to wherever the
+      // nearest open space happens to be (e.g., point or the covers).
+      const isEdge = contactType === "edged_off" || contactType === "edged_leg";
+      if (!isEdge) {
+        // Find the largest gap near the original shot direction (within ±90°)
+        // so the four goes in a realistic direction relative to the delivery line
+        const nearbyAngles = fielderPolars
+          .map((p) => p.angle)
+          .filter((a) => angDiff(a, originalAngle) < 90);
 
-      if (nearbyAngles.length >= 2) {
-        // Sort and find gaps within this neighbourhood
-        nearbyAngles.sort((a, b) => a - b);
-        let bestGapCenter = originalAngle;
-        let bestGapSize = 0;
-        for (let i = 0; i < nearbyAngles.length; i++) {
-          const curr = nearbyAngles[i];
-          const next = nearbyAngles[(i + 1) % nearbyAngles.length];
-          const gap = ((next - curr + 360) % 360);
-          const gapCenter = (curr + gap / 2) % 360;
-          // Only use this gap if its center is also near the original direction
-          if (gap > bestGapSize && angDiff(gapCenter, originalAngle) < 90) {
-            bestGapSize = gap;
-            bestGapCenter = gapCenter;
+        if (nearbyAngles.length >= 2) {
+          // Sort and find gaps within this neighbourhood
+          nearbyAngles.sort((a, b) => a - b);
+          let bestGapCenter = originalAngle;
+          let bestGapSize = 0;
+          for (let i = 0; i < nearbyAngles.length; i++) {
+            const curr = nearbyAngles[i];
+            const next = nearbyAngles[(i + 1) % nearbyAngles.length];
+            const gap = ((next - curr + 360) % 360);
+            const gapCenter = (curr + gap / 2) % 360;
+            // Only use this gap if its center is also near the original direction
+            if (gap > bestGapSize && angDiff(gapCenter, originalAngle) < 90) {
+              bestGapSize = gap;
+              bestGapCenter = gapCenter;
+            }
           }
+          shotAngle = bestGapCenter;
         }
-        shotAngle = bestGapCenter;
+        // else: fewer than 2 fielders nearby, keep original angle (it's already a gap)
       }
-      // else: fewer than 2 fielders nearby, keep original angle (it's already a gap)
       shotDistance = 0.95 + rng() * 0.05; // reaches the boundary
 
     } else if (result === "six") {
