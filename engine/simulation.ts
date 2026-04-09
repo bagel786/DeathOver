@@ -40,6 +40,8 @@ export interface DeliveryInput {
   rngCallCount: number;
   /** Last variation bowled (for AI pattern reading) */
   lastVariation: DeliveryVariation | null;
+  /** How many of the last 4 legal deliveries were yorkers — batsman "sets" to repeated yorkers */
+  recentYorkerCount: number;
   /** True when the previous ball was a no-ball — batsman cannot be dismissed this delivery */
   isFreeHit: boolean;
 }
@@ -106,6 +108,7 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     baseSeed,
     rngCallCount,
     lastVariation,
+    recentYorkerCount,
     isFreeHit,
   } = input;
 
@@ -213,6 +216,16 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     contactProb -= variationPenalty;
   } else {
     contactProb += 0.08; // Batsman picked the variation — sitting on it
+  }
+
+  // ==============================================================
+  // STEP 5b: Yorker adaptation — batsman "gets set" to repeated yorkers
+  // First yorker is hardest; each recent repeat is slightly easier to read.
+  // Effect is subtle — a yorker is always difficult, just less of a surprise.
+  // Max +0.08 so even a fully-set batsman still faces a hard delivery.
+  // ==============================================================
+  if (deliveryLength === "yorker" && recentYorkerCount > 0) {
+    contactProb += Math.min(recentYorkerCount * 0.04, 0.08);
   }
 
   // ==============================================================

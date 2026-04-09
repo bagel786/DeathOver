@@ -202,7 +202,7 @@ export function angleToDirectionLabel(angle: number): string {
   if (angle < 112.5) return "square on the leg side";
   if (angle < 157.5) return "behind square on the leg side";
   if (angle < 202.5) return "behind the wicket";
-  if (angle < 247.5) return "through the covers";
-  if (angle < 292.5) return "square on the off side";
-  return "through the off side";
+  if (angle < 247.5) return "behind square on the off side"; // gully / third man zone
+  if (angle < 292.5) return "square on the off side";        // point region
+  return "through the covers";                               // cover drive zone (310°–333°)
 }

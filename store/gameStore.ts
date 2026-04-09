@@ -227,6 +227,13 @@ export const useGameStore = create<GameStore>()(
         ? ballLog[ballLog.length - 1].delivery.variation
         : null;
 
+      // Count yorkers in the last 4 legal (non-extra) deliveries — batsman gets set to repeated yorkers
+      const recentYorkerCount = ballLog
+        .filter(b => !b.isExtraDelivery)
+        .slice(-4)
+        .filter(b => b.delivery.length === "yorker")
+        .length;
+
       const outcome = calculateDeliveryOutcome({
         ballNumber: match.ballsBowled + 1,
         deliveryLength,
@@ -243,6 +250,7 @@ export const useGameStore = create<GameStore>()(
         baseSeed: daily?.seed ?? null,
         rngCallCount,
         lastVariation,
+        recentYorkerCount,
         isFreeHit: match.nextBallIsFreeHit,
       });
 

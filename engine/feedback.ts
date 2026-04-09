@@ -84,25 +84,35 @@ function shotVerbFromDelivery(length: DeliveryLength, line: DeliveryLine, angle?
   const isOff = line === "off" || line === "wide_outside_off";
 
   if (angle !== undefined) {
-    // Ball went backward of the stumps on off/middle — must be an edge regardless of length
-    const isBehindWicket = angle >= 157.5 && angle < 202.5;
-    if (isBehindWicket && !isLeg) return "edged";
+    // Ball went to the fine/keeper zone — always a glance regardless of delivery or line
+    // (flicks and drives don't reach behind the wicket with clean contact)
+    const isVeryFine = angle >= 157.5 && angle < 202.5;
+    if (isVeryFine) return isLeg ? "glanced" : "edged";
 
-    // Short ball to the pull/hook zone (mid-wicket → square leg): not a glance or a slap
+    // Behind square on leg side (fine leg area): leg-side delivery = glance, not a flick
+    const isBehindSquareLeg = angle >= 112.5 && angle < 157.5;
+    if (isBehindSquareLeg && isLeg && (length === "full" || length === "good_length")) {
+      return "glanced";
+    }
+
+    // Short ball to the pull/hook zone (mid-wicket → square leg)
     const isPullZone = angle >= 22.5 && angle < 112.5;
     if ((length === "bouncer" || length === "short") && isPullZone) {
       return length === "bouncer" ? "hooked" : "pulled";
     }
   }
 
-  if (length === "yorker")                          return "squeezed";
+  if (length === "yorker") return "squeezed";
   if (length === "bouncer" || length === "short") {
-    if (isLeg)  return "glanced";
-    if (isOff)  return "cut";
+    if (isLeg) return "glanced";
+    if (isOff) return "cut";
     return "slapped";
   }
-  if (length === "full")  return isLeg ? "flicked" : "driven";
-  return "nudged"; // good_length
+  if (length === "full") return isLeg ? "flicked" : "driven";
+  // good_length — distinguish by line
+  if (isOff) return "driven";
+  if (isLeg) return "worked";
+  return "nudged"; // middle stump
 }
 
 /** Zone-aware tactical tip mapping a shot angle to the specific fielder that would plug the gap */
@@ -121,10 +131,10 @@ function zoneTacticalTip(angle: number, deep: boolean): string {
   if (angle < 202.5)
     return `Tip: Third man was vacant — a ${d}third man or deep gully would cut off balls going there.`;
   if (angle < 247.5)
-    return `Tip: Cover drive region was exposed — a cover point or ${d}extra cover would have helped.`;
+    return `Tip: Gully / third man region was exposed — a ${d}third man or backward point would have cut that off.`;
   if (angle < 292.5)
     return `Tip: Point was the gap — a ${d}point or backward point would have cut that off.`;
-  return `Tip: Off side channel was exposed — a ${d}cover point or mid-off in that region would have saved it.`;
+  return `Tip: Cover drive region was open — a ${d}cover or extra cover would have saved that.`;
 }
 
 /** Shot verb that reflects HOW the ball was actually struck */
@@ -149,7 +159,6 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
     aiExpectation,
     wasLengthBluff,
     wasVariationBluff,
-    result,
     runsScored,
     isWicket,
     coverage,
@@ -349,15 +358,26 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
       case "edged_off":
         parts.push(`Outside edge flies ${direction} — a fortunate four through to the boundary.`);
         break;
-      case "edged_leg":
-        parts.push(`Inside edge deflects fine ${direction} — a streaky four.`);
+      case "edged_leg": {
+        let edgeLegDesc: string;
+        if (shotAngle < 67.5) {
+          edgeLegDesc = `Inside edge deflects through mid-wicket — a fortunate four.`;
+        } else if (shotAngle < 112.5) {
+          edgeLegDesc = `Inside edge deflects square on the leg side — a streaky four.`;
+        } else {
+          edgeLegDesc = `Inside edge deflects fine on the leg side — a streaky four.`;
+        }
+        parts.push(edgeLegDesc);
         break;
+      }
       case "upper_cut":
-        parts.push(`Upper cut over backward point ${direction} — perfectly placed. Four runs.`);
+        parts.push(`Audacious upper cut ${direction} — beats the fielder to the boundary. Four runs.`);
         break;
-      case "scoop":
-        parts.push(`Scooped over fine leg ${direction} — improvised perfectly. Four runs.`);
+      case "scoop": {
+        const scoopTarget = shotAngle < 157.5 ? "over fine leg" : "over the keeper";
+        parts.push(`Scooped ${scoopTarget} — improvised perfectly. Four runs.`);
         break;
+      }
       case "pull":
         parts.push(`Pulled ${direction} — timed well and it raced away. Four runs.`);
         break;
@@ -410,7 +430,13 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
     if (contactType === "edged_off") {
       parts.push(`Tip: Outside edge flew through the off side — a slip cordon or third man would have been the answer.`);
     } else if (contactType === "edged_leg") {
-      parts.push(`Tip: That inside edge went fine — a fine leg or leg slip would have been dangerous there.`);
+      if (shotAngle < 67.5) {
+        parts.push(`Tip: That inside edge deflected through mid-wicket — a mid-wicket or square leg would have been the answer.`);
+      } else if (shotAngle < 112.5) {
+        parts.push(`Tip: That inside edge went square on the leg side — a square leg or backward square leg would have been dangerous there.`);
+      } else {
+        parts.push(`Tip: That inside edge went fine — a fine leg or leg slip would have been dangerous there.`);
+      }
     } else if (contactType === "upper_cut") {
       parts.push(`Tip: The batsman upper cut over backward point — a third man or deep backward point would have saved that.`);
     } else if (contactType === "scoop") {
