@@ -95,10 +95,23 @@ function shotVerbFromDelivery(length: DeliveryLength, line: DeliveryLine, angle?
       return "glanced";
     }
 
-    // Short ball to the pull/hook zone (mid-wicket → square leg)
+    // Bouncer off-stump into the gully / third man zone = upper cut, not a regular cut
+    const isGullyZone = angle >= 202.5 && angle < 247.5;
+    if (length === "bouncer" && isOff && isGullyZone) return "upper cut";
+
+    // Short/bouncer pull/hook zone (mid-wicket → square leg)
     const isPullZone = angle >= 22.5 && angle < 112.5;
     if ((length === "bouncer" || length === "short") && isPullZone) {
       return length === "bouncer" ? "hooked" : "pulled";
+    }
+
+    // Good-length on middle stump — use shot direction to pick a meaningful verb
+    // instead of the generic "nudged" which fits neither a boundary nor a flick
+    if (length === "good_length" && !isOff && !isLeg) {
+      // Off-side or straight trajectory: driven/pushed through the line
+      if (angle >= 202.5 || angle < 22.5) return "driven";
+      // Leg-side trajectory: worked or tucked away
+      return "worked";
     }
   }
 
@@ -109,10 +122,10 @@ function shotVerbFromDelivery(length: DeliveryLength, line: DeliveryLine, angle?
     return "slapped";
   }
   if (length === "full") return isLeg ? "flicked" : "driven";
-  // good_length — distinguish by line
+  // good_length — distinguish by line (angle unavailable fallback)
   if (isOff) return "driven";
   if (isLeg) return "worked";
-  return "nudged"; // middle stump
+  return "nudged"; // middle stump, no angle info
 }
 
 /** Zone-aware tactical tip mapping a shot angle to the specific fielder that would plug the gap */
