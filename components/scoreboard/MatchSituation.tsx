@@ -103,10 +103,15 @@ export default function MatchSituation() {
 function BallDots() {
   const ballLog = useGameStore((s) => s.ballLog);
   const totalBalls = useGameStore((s) => s.match.totalBalls);
+  const ballsBowled = useGameStore((s) => s.match.ballsBowled);
+
+  // Total slots = all balls already in log + empty slots for remaining regular deliveries
+  const emptySlots = totalBalls - ballsBowled;
+  const totalSlots = ballLog.length + emptySlots;
 
   return (
     <div className="flex gap-1 flex-wrap">
-      {Array.from({ length: totalBalls }).map((_, i) => {
+      {Array.from({ length: totalSlots }).map((_, i) => {
         const ball = ballLog[i];
         if (!ball) {
           return (
@@ -117,6 +122,34 @@ function BallDots() {
             />
           );
         }
+
+        // Extra deliveries: no-ball or wide get special treatment
+        if (ball.chaosEvent === "no_ball") {
+          const color = "#ff6b35";
+          return (
+            <div
+              key={i}
+              className="px-1 h-6 rounded-full flex items-center justify-center text-[9px] font-bold font-mono"
+              style={{ background: color + "33", border: `1px solid ${color}`, color }}
+            >
+              NB{ball.runsScored}
+            </div>
+          );
+        }
+
+        if (ball.chaosEvent === "wide") {
+          const color = "#00bcd4";
+          return (
+            <div
+              key={i}
+              className="px-1 h-6 rounded-full flex items-center justify-center text-[9px] font-bold font-mono"
+              style={{ background: color + "33", border: `1px solid ${color}`, color }}
+            >
+              Wd{ball.runsScored}
+            </div>
+          );
+        }
+
         const color =
           ball.isWicket ? "#ff4444"
           : ball.runsScored >= 6 ? "#9c27b0"

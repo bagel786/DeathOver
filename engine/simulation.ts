@@ -143,10 +143,20 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       leg:              "leg stump",
       wide_outside_leg: "down leg",
     };
+
+    // Bye runs off a wide: ball beats keeper → batsmen can run.
+    // Only byes allowed (no bat involved), not additional wides.
+    // ~15% chance of 1 bye, ~5% chance of 2 byes.
+    const byeRoll = rng();
+    const byeRuns = byeRoll < 0.05 ? 2 : byeRoll < 0.20 ? 1 : 0;
+    const totalWideRuns = 1 + byeRuns;
+
     const wideFeedback = deliveryLength === "yorker"
-      ? `Wide! The yorker attempt on ${lineNames[deliveryLine]} went too far — umpire signals immediately. Extra run, bowl again.`
+      ? `Wide! The yorker attempt on ${lineNames[deliveryLine]} went too far — umpire signals immediately.${byeRuns > 0 ? ` Ball beats the keeper — ${byeRuns} bye${byeRuns > 1 ? "s" : ""} taken. ${totalWideRuns} runs, bowl again.` : " Extra run, bowl again."}`
       : deliveryLength === "bouncer"
-      ? `Wide! The bouncer on ${lineNames[deliveryLine]} was called wide — too far down leg or climbing past the batsman. Extra run, bowl again.`
+      ? `Wide! The bouncer on ${lineNames[deliveryLine]} was called wide — too far down leg or climbing past the batsman.${byeRuns > 0 ? ` Ball goes past the keeper — ${byeRuns} bye${byeRuns > 1 ? "s" : ""} added. ${totalWideRuns} runs, bowl again.` : " Extra run, bowl again."}`
+      : byeRuns > 0
+      ? `Wide called on ${lineNames[deliveryLine]}! Ball beats the keeper — ${byeRuns} bye${byeRuns > 1 ? "s" : ""} taken. ${totalWideRuns} runs total, bowl again.`
       : `Wide called on ${lineNames[deliveryLine]}! An extra run is added and you must bowl this ball again.`;
 
     return {
@@ -156,8 +166,8 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       aiExpectation:   { length: deliveryLength, variation: deliveryVariation },
       wasLengthBluff:  false,
       wasVariationBluff: false,
-      result:          "dot",
-      runsScored:      1,
+      result:          byeRuns >= 2 ? "two" : byeRuns === 1 ? "single" : "dot",
+      runsScored:      totalWideRuns,
       isWicket:        false,
       isCaught:        false,
       chaosEvent:      "wide",
@@ -253,6 +263,15 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
   // ==============================================================
   contactProb += (batsmanConfidence - 50) / 500;
 
+  // ==============================================================
+  // STEP 8b: Free hit — batsman knows they can't get out, swings harder
+  // Higher contact probability (more committed) and boosted desperation
+  // threshold so they attempt big shots more freely.
+  // ==============================================================
+  if (isFreeHit) {
+    contactProb += 0.10;
+  }
+
   // Clamp to playable range
   contactProb = Math.max(0.05, Math.min(0.90, contactProb));
 
@@ -273,8 +292,10 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
   // This can result in a 6, 4, or get them out.
   // ==============================================================
   const desperationRoll = rng();
-  // Desperation swing only when pressure builds — low base ensures it's not triggered randomly
-  const desperationThreshold = 0.10 + pressure * batsman.riskTolerance * batsman.aggression * 0.60;
+  // Desperation swing only when pressure builds — low base ensures it's not triggered randomly.
+  // On a free hit the batsman has zero fear of dismissal, so the threshold jumps significantly.
+  const desperationThreshold = 0.10 + pressure * batsman.riskTolerance * batsman.aggression * 0.60
+    + (isFreeHit ? 0.18 : 0);
   const isDesperationSwing = desperationRoll < desperationThreshold;
 
   // ==============================================================
