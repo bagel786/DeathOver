@@ -170,6 +170,8 @@ export function getZoneCoverage(
   targetDistance: number
 ): number {
   let maxCoverage = 0;
+  const ANGLE_WINDOW = 25;
+  const DIST_WINDOW = 0.22;
   for (const f of fielders) {
     const fPolar = cartesianToPolar(f.position.x, f.position.y);
     const angleDiff = Math.min(
@@ -177,12 +179,25 @@ export function getZoneCoverage(
       360 - Math.abs(fPolar.angle - targetAngle)
     );
     const distDiff = Math.abs(fPolar.distance - targetDistance);
-    const ANGLE_WINDOW = 25;
-    const DIST_WINDOW = 0.22;
+
     if (angleDiff < ANGLE_WINDOW && distDiff < DIST_WINDOW) {
+      // Fielder is statically on the line — full coverage
       const coverage = (1 - angleDiff / ANGLE_WINDOW) * 0.65 +
                        (1 - distDiff / DIST_WINDOW) * 0.35;
       maxCoverage = Math.max(maxCoverage, coverage);
+    } else {
+      // Fielder can sprint laterally to intercept — outfielders have less mobility
+      const isOutfielder = fPolar.distance > 0.55;
+      const ANGLE_CHASE = isOutfielder ? 38 : 48;
+      const DIST_CHASE = DIST_WINDOW * 1.3;
+      if (angleDiff < ANGLE_CHASE && distDiff < DIST_CHASE) {
+        // Chase coverage: max ~0.35, tapering off as angle/distance increases
+        const chaseCoverage =
+          0.35 *
+          (1 - (angleDiff - ANGLE_WINDOW) / (ANGLE_CHASE - ANGLE_WINDOW)) *
+          (1 - distDiff / DIST_CHASE);
+        maxCoverage = Math.max(maxCoverage, chaseCoverage);
+      }
     }
   }
   return maxCoverage;

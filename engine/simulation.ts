@@ -414,22 +414,39 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
         result = "six"; runsScored = 6;
       }
     } else if (coverage > 0.40) {
-      // Fielder has to dive / sprint — death batsmen back themselves to beat the field
+      // Fielder has to dive / sprint — in T20 they cut off most boundaries but batsmen always run
       const runRoll = rng();
       const sixChance = batsman.aggression * batsman.riskTolerance * 0.18;
       if (runRoll < sixChance) {
         result = "six"; runsScored = 6;
-      } else if (runRoll < sixChance + 0.03) {
+      } else if (runRoll < sixChance + 0.04) {
         result = "dot"; runsScored = 0;
-      } else if (runRoll < sixChance + 0.15) {
+      } else if (runRoll < sixChance + 0.40) {
+        // Fielder dives and saves the four — batsmen take the single
         result = "single"; runsScored = 1;
-      } else if (runRoll < sixChance + 0.42) {
+      } else if (runRoll < sixChance + 0.58) {
+        result = "two"; runsScored = 2;
+      } else {
+        result = "four"; runsScored = 4;
+      }
+    } else if (coverage > 0.20) {
+      // Fielder sprinting laterally — ball hit slightly wide of their position
+      // They can cut off many boundaries; single is the dominant outcome in T20
+      const runRoll = rng();
+      const sixChance = batsman.aggression * batsman.riskTolerance * 0.10;
+      if (runRoll < sixChance) {
+        result = "six"; runsScored = 6;
+      } else if (runRoll < sixChance + 0.05) {
+        result = "dot"; runsScored = 0;
+      } else if (runRoll < sixChance + 0.50) {
+        result = "single"; runsScored = 1;
+      } else if (runRoll < sixChance + 0.70) {
         result = "two"; runsScored = 2;
       } else {
         result = "four"; runsScored = 4;
       }
     } else {
-      // GAP — no fielder in this zone. Gaps produce runs, mostly fours.
+      // GAP — no fielder within reach. Gaps produce runs, mostly fours.
       // A six requires clearing the rope AND the ball being in the air — gaps alone don't guarantee maximums.
       const gapRoll = rng();
       const aggBonus = batsman.aggression * 0.18;
