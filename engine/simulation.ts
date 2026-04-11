@@ -373,17 +373,41 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       runsScored = 0;
       isWicket = true;
     } else if (missRoll < wicketChance + 0.10) {
-      // Outside / top edge — deflects to the boundary (less common than pure fortune would suggest)
-      result = "four";
-      runsScored = 4;
+      // Outside / top edge — deflects behind square; fielder presence determines whether it reaches the rope
       if (isOffSideDelivery) {
-        shotAngle = 205 + rng() * 25;  // gully / third man (205°-230°) — stays behind square on the off side
+        shotAngle = 205 + rng() * 25;  // gully / third man (205°-230°)
         contactType = "edged_off";
       } else {
         shotAngle = 120 + rng() * 30;  // fine leg region (120°-150°)
         contactType = "edged_leg";
       }
       shotDistance = 0.88 + rng() * 0.08;
+      // Re-evaluate coverage in the actual edge direction — a fine leg / third man fielder should cut this off
+      const edgeCoverage = getZoneCoverage(fielders, shotAngle, shotDistance);
+      if (edgeCoverage > 0.40) {
+        // Fielder is right there — single most of the time, dot on a clean pick-up
+        const edgeRoll = rng();
+        if (edgeRoll < 0.10) {
+          result = "dot"; runsScored = 0;       // cleanly fielded, no run
+        } else if (edgeRoll < 0.85) {
+          result = "single"; runsScored = 1;    // fielder cuts it off, they take one
+        } else {
+          result = "two"; runsScored = 2;       // fielder fumbles / far from stumps
+        }
+      } else if (edgeCoverage > 0.20) {
+        // Fielder chasing — mostly single, occasional two or four
+        const edgeRoll = rng();
+        if (edgeRoll < 0.50) {
+          result = "single"; runsScored = 1;
+        } else if (edgeRoll < 0.75) {
+          result = "two"; runsScored = 2;
+        } else {
+          result = "four"; runsScored = 4;
+        }
+      } else {
+        // No one back there — races to the boundary
+        result = "four"; runsScored = 4;
+      }
     } else if (missRoll < wicketChance + 0.55) {
       // Squeezed / dug out for a single or two — batsmen in death always look to rotate
       const squeezeRoll = rng();
