@@ -9,9 +9,14 @@ interface SpotlightMaskProps {
   onClick?: () => void;
 }
 
+const TINT = "rgba(0,0,0,0.78)";
+
 /**
- * Full-screen dark overlay with a transparent "hole" punched over the target
- * element, plus an animated pulsing ring to draw the player's eye.
+ * Full-screen dark overlay with a live hole over the target element.
+ *
+ * IMPORTANT: Uses four positioned divs (top/bottom/left/right strips) rather than
+ * an SVG mask so the hole area has *no DOM element at all* — pointer events (drag,
+ * click, touch) fall straight through to the game UI underneath.
  */
 export default function SpotlightMask({
   targetRect,
@@ -19,78 +24,60 @@ export default function SpotlightMask({
   borderRadius = 10,
   onClick,
 }: SpotlightMaskProps) {
-  const hasTarget = targetRect !== null;
+  if (!targetRect) {
+    // No spotlight — single full-screen tint
+    return (
+      <div
+        className="fixed inset-0"
+        style={{ zIndex: 100, background: TINT, pointerEvents: "all" }}
+        onClick={onClick}
+      />
+    );
+  }
 
-  // The hole rect (with padding)
-  const holeX = hasTarget ? targetRect!.left - padding : 0;
-  const holeY = hasTarget ? targetRect!.top - padding : 0;
-  const holeW = hasTarget ? targetRect!.width + padding * 2 : 0;
-  const holeH = hasTarget ? targetRect!.height + padding * 2 : 0;
+  const hx = targetRect.left - padding;
+  const hy = targetRect.top - padding;
+  const hw = targetRect.width + padding * 2;
+  const hh = targetRect.height + padding * 2;
+
+  const clickProps = {
+    style: { background: TINT, pointerEvents: "all" as const, cursor: "default" },
+    onClick,
+  };
 
   return (
     <>
-      {/* Dark SVG overlay with punched hole */}
-      <svg
-        className="fixed inset-0 pointer-events-none"
-        style={{ width: "100vw", height: "100vh", zIndex: 100 }}
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <defs>
-          <mask id="tutorial-spotlight">
-            {/* White = show dark overlay */}
-            <rect width="100%" height="100%" fill="white" />
-            {/* Black = transparent hole */}
-            {hasTarget && (
-              <rect
-                x={holeX}
-                y={holeY}
-                width={holeW}
-                height={holeH}
-                rx={borderRadius}
-                fill="black"
-              />
-            )}
-          </mask>
-        </defs>
+      {/* Four strips surrounding the hole — none of them cover the hole itself */}
+      {/* Top strip */}
+      <div className="fixed left-0 right-0 top-0" style={{ ...clickProps.style, height: hy, zIndex: 100 }} onClick={onClick} />
+      {/* Bottom strip */}
+      <div className="fixed left-0 right-0 bottom-0" style={{ ...clickProps.style, top: hy + hh, zIndex: 100 }} onClick={onClick} />
+      {/* Left strip (same row as hole) */}
+      <div className="fixed left-0" style={{ ...clickProps.style, top: hy, width: hx, height: hh, zIndex: 100 }} onClick={onClick} />
+      {/* Right strip (same row as hole) */}
+      <div className="fixed right-0" style={{ ...clickProps.style, top: hy, left: hx + hw, height: hh, zIndex: 100 }} onClick={onClick} />
 
-        {/* The dark tint — clicking outside the hole triggers onClick */}
-        <rect
-          width="100%"
-          height="100%"
-          fill="rgba(0,0,0,0.78)"
-          mask="url(#tutorial-spotlight)"
-          style={{ pointerEvents: "all", cursor: "default" }}
-          onClick={onClick}
-        />
-      </svg>
-
-      {/* Animated "LOOK AT ME" ring around the hole */}
-      {hasTarget && (
-        <motion.div
-          className="fixed pointer-events-none rounded-lg"
-          style={{
-            zIndex: 101,
-            left: holeX - 2,
-            top: holeY - 2,
-            width: holeW + 4,
-            height: holeH + 4,
-            borderRadius: borderRadius + 2,
-          }}
-          animate={{
-            boxShadow: [
-              "0 0 0px 2px #00d4ff, 0 0 16px 6px rgba(0,212,255,0.35)",
-              "0 0 0px 3px #ffcc00, 0 0 24px 10px rgba(255,204,0,0.30)",
-              "0 0 0px 2px #00d4ff, 0 0 16px 6px rgba(0,212,255,0.35)",
-            ],
-            scale: [1, 1.012, 1],
-          }}
-          transition={{
-            duration: 1.8,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      )}
+      {/* Animated "LOOK AT ME" ring — pointer-events none so it doesn't block the hole */}
+      <motion.div
+        className="fixed pointer-events-none rounded-lg"
+        style={{
+          zIndex: 101,
+          left: hx - 2,
+          top: hy - 2,
+          width: hw + 4,
+          height: hh + 4,
+          borderRadius: borderRadius + 2,
+        }}
+        animate={{
+          boxShadow: [
+            "0 0 0px 2px #00d4ff, 0 0 16px 6px rgba(0,212,255,0.35)",
+            "0 0 0px 3px #ffcc00, 0 0 24px 10px rgba(255,204,0,0.30)",
+            "0 0 0px 2px #00d4ff, 0 0 16px 6px rgba(0,212,255,0.35)",
+          ],
+          scale: [1, 1.012, 1],
+        }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+      />
     </>
   );
 }

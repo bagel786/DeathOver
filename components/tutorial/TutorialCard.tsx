@@ -84,20 +84,27 @@ function getCardPosition(targetRect: DOMRect | null, arrowPosition: ArrowPositio
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  // Try to place card on opposite side to the arrow
-  // arrowPosition is the direction from card → spotlight
+  /** Fall back to bottom-center if there's no room on the preferred side. */
+  const bottomCenter = (): React.CSSProperties => ({
+    left: Math.max(MARGIN, vw / 2 - CARD_W / 2),
+    top: Math.max(MARGIN, vh - CARD_H - 24),
+  });
+
+  // Arrow points right → card to the LEFT of the spotlight
   if (arrowPosition === "right" || arrowPosition === "none") {
-    // Arrow points right → card is to the left of the spotlight
-    const left = Math.max(MARGIN, targetRect.left - CARD_W - 60);
+    const left = targetRect.left - CARD_W - 60;
+    if (left < MARGIN) return bottomCenter(); // not enough room left — go bottom
     const top = Math.min(
       Math.max(MARGIN, targetRect.top + targetRect.height / 2 - CARD_H / 2),
       vh - CARD_H - MARGIN
     );
-    return { left, top };
+    return { left: Math.max(MARGIN, left), top };
   }
 
+  // Arrow points left → card to the RIGHT of the spotlight
   if (arrowPosition === "left") {
-    const left = Math.min(targetRect.right + 60, vw - CARD_W - MARGIN);
+    const left = targetRect.right + 60;
+    if (left + CARD_W > vw - MARGIN) return bottomCenter(); // not enough room right
     const top = Math.min(
       Math.max(MARGIN, targetRect.top + targetRect.height / 2 - CARD_H / 2),
       vh - CARD_H - MARGIN
@@ -105,8 +112,8 @@ function getCardPosition(targetRect: DOMRect | null, arrowPosition: ArrowPositio
     return { left, top };
   }
 
+  // Arrow points up (▲ below target) → card below the spotlight
   if (arrowPosition === "top") {
-    // Arrow points up → card is below the spotlight
     const left = Math.min(
       Math.max(MARGIN, targetRect.left + targetRect.width / 2 - CARD_W / 2),
       vw - CARD_W - MARGIN
@@ -115,6 +122,7 @@ function getCardPosition(targetRect: DOMRect | null, arrowPosition: ArrowPositio
     return { left, top };
   }
 
+  // Arrow points down (▼ above target) → card above the spotlight
   if (arrowPosition === "bottom") {
     const left = Math.min(
       Math.max(MARGIN, targetRect.left + targetRect.width / 2 - CARD_W / 2),
