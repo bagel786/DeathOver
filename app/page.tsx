@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
+import { useTutorialStore } from "@/store/tutorialStore";
+import NewPlayerModal from "@/components/tutorial/NewPlayerModal";
 import type { DailyChallenge } from "@/types/game";
 
 function IconUsers() {
@@ -40,12 +42,18 @@ export default function HomePage() {
   const router = useRouter();
   const setDailyChallenge = useGameStore((s) => s.setDailyChallenge);
   const startGame = useGameStore((s) => s.startGame);
+  const startTutorial = useTutorialStore((s) => s.startTutorial);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCustom, setShowCustom] = useState(false);
   const [customTarget, setCustomTarget] = useState(12);
   const [customWickets, setCustomWickets] = useState(3);
   const [stats, setStats] = useState<{ total_plays: number; unique_users: number } | null>(null);
+
+  // New player modal state
+  const [showNewPlayerModal, setShowNewPlayerModal] = useState(false);
+  const [pendingChallenge, setPendingChallenge] = useState<DailyChallenge | null>(null);
+  const [pendingGameType, setPendingGameType] = useState<"daily" | "custom" | null>(null);
 
   useEffect(() => {
     fetch("/api/stats")
@@ -54,6 +62,46 @@ export default function HomePage() {
       .catch(() => {});
   }, []);
 
+  /** Check if this is a first-time player. Returns true if we showed the modal. */
+  const checkNewPlayer = (type: "daily" | "custom"): boolean => {
+    if (typeof window === "undefined") return false;
+    if (localStorage.getItem("deathover_has_played")) return false;
+    setPendingGameType(type);
+    setShowNewPlayerModal(true);
+    return true;
+  };
+
+  /** Execute the pending game after modal interaction */
+  const executePendingGame = () => {
+    if (pendingGameType === "daily" && pendingChallenge) {
+      setDailyChallenge(pendingChallenge);
+      router.push("/play");
+    } else if (pendingGameType === "custom") {
+      startGame({
+        target: customTarget,
+        totalBalls: 6,
+        wicketsRemaining: customWickets,
+        batsmanArchetype: "aggressive",
+        batsmanName: "Power Hitter",
+        nonStrikerArchetype: "accumulator",
+        nonStrikerName: "The Rotator",
+      });
+      router.push("/play");
+    }
+  };
+
+  const handleNewPlayerTutorial = () => {
+    setShowNewPlayerModal(false);
+    startTutorial("new_player_prompt");
+    router.push("/play");
+  };
+
+  const handleNewPlayerSkip = () => {
+    localStorage.setItem("deathover_has_played", "1");
+    setShowNewPlayerModal(false);
+    executePendingGame();
+  };
+
   const handleDailyChallenge = async () => {
     setLoading(true);
     setError(null);
@@ -61,6 +109,11 @@ export default function HomePage() {
       const res = await fetch("/api/daily-challenge", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch daily challenge");
       const challenge: DailyChallenge = await res.json();
+      setPendingChallenge(challenge);
+      if (checkNewPlayer("daily")) {
+        setLoading(false);
+        return;
+      }
       setDailyChallenge(challenge);
       router.push("/play");
     } catch {
@@ -71,6 +124,7 @@ export default function HomePage() {
   };
 
   const handleCustomGame = () => {
+    if (checkNewPlayer("custom")) return;
     startGame({
       target: customTarget,
       totalBalls: 6,
@@ -83,11 +137,22 @@ export default function HomePage() {
     router.push("/play");
   };
 
+  const handleHowToPlay = () => {
+    startTutorial("home_button");
+    router.push("/play");
+  };
+
   return (
     <main
       className="min-h-screen flex flex-col items-center justify-center gap-8 p-6"
       style={{ background: "#000000" }}
     >
+      {showNewPlayerModal && (
+        <NewPlayerModal
+          onStartTutorial={handleNewPlayerTutorial}
+          onSkip={handleNewPlayerSkip}
+        />
+      )}
       {/* Logo */}
       <img
         src="/logo.svg"
@@ -216,6 +281,21 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {/* HOW TO PLAY — always accessible tutorial entry */}
+      <button
+        onClick={handleHowToPlay}
+        className="font-mono text-xs tracking-widest py-2 px-5 rounded-xl transition-colors"
+        style={{
+          border: "1px solid #1e3d2a",
+          color: "#4a7a5a",
+          background: "transparent",
+          cursor: "pointer",
+        }}
+      >
+        HOW TO PLAY
+        <span className="ml-2" style={{ color: "#2d4a35" }}>→</span>
+      </button>
 
       {/* Play stats */}
       {stats && (

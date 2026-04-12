@@ -3,17 +3,22 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore } from "@/store/gameStore";
+import { useTutorialStore } from "@/store/tutorialStore";
 import CricketField from "@/components/field/CricketField";
 import DeliverySelector from "@/components/delivery/DeliverySelector";
 import BowlButton from "@/components/delivery/BowlButton";
 import MatchSituation from "@/components/scoreboard/MatchSituation";
 import FeedbackPanel from "@/components/feedback/FeedbackPanel";
 import ResultScreen from "@/components/results/ResultScreen";
+import TutorialOverlay from "@/components/tutorial/TutorialOverlay";
+import TutorialHint from "@/components/tutorial/TutorialHint";
 import type { BallOutcome } from "@/types/game";
 
 export default function PlayPage() {
   const bowlDelivery = useGameStore((s) => s.bowlDelivery);
   const isComplete = useGameStore((s) => s.match.isComplete);
+  const tutorialActive = useTutorialStore((s) => s.active);
+  const completeTutorial = useTutorialStore((s) => s.completeTutorial);
 
   const [isAnimating, setIsAnimating] = useState(false);
   const [lastOutcome, setLastOutcome] = useState<BallOutcome | null>(null);
@@ -28,6 +33,13 @@ export default function PlayPage() {
   useEffect(() => {
     if (!isComplete) setShowResults(false);
   }, [isComplete]);
+
+  // Complete the tutorial when the game ends (if tutorial was active)
+  useEffect(() => {
+    if (isComplete && tutorialActive) {
+      completeTutorial();
+    }
+  }, [isComplete, tutorialActive, completeTutorial]);
 
   const handleBowl = useCallback(() => {
     bowlDelivery();
@@ -158,6 +170,10 @@ export default function PlayPage() {
           <FeedbackPanel onShowResults={isComplete ? () => setShowResults(true) : undefined} />
         </motion.div>
       </div>
+
+      {/* Tutorial system */}
+      <TutorialOverlay onForceMobileTab={setMobileTab} />
+      {tutorialActive && <TutorialHint />}
 
       <AnimatePresence>
         {chaosFlash && (

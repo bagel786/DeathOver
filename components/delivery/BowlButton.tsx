@@ -22,6 +22,7 @@ export default function BowlButton({ onBowl, isAnimating }: BowlButtonProps) {
       <button
         disabled={!canBowl}
         onClick={onBowl}
+        data-tutorial="bowl-button"
         className={`w-full py-3.5 rounded-xl font-mono font-bold tracking-widest text-sm transition-all duration-200${canBowl ? " bowl-btn-ready" : ""}`}
         style={{
           background: canBowl

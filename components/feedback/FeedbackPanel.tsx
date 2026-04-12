@@ -24,6 +24,7 @@ export default function FeedbackPanel({ onShowResults }: FeedbackPanelProps) {
   if (ballLog.length === 0) {
     return (
       <div
+        data-tutorial="feedback-panel"
         className="p-4 rounded-xl"
         style={{
           background: "rgba(10,15,13,0.9)",
@@ -54,6 +55,7 @@ export default function FeedbackPanel({ onShowResults }: FeedbackPanelProps) {
   return (
     <motion.div
       key={ballLog.length}
+      data-tutorial="feedback-panel"
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}

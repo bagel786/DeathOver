@@ -111,7 +111,7 @@ export default function CricketField({
   }, []);
 
   return (
-    <div className="relative w-full aspect-square select-none">
+    <div className="relative w-full aspect-square select-none" data-tutorial="cricket-field">
       <svg
         ref={svgRef}
         viewBox="0 0 100 100"

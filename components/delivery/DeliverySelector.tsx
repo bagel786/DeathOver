@@ -92,9 +92,9 @@ export default function DeliverySelector() {
   const isComplete = useGameStore((s) => s.match.isComplete);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3" data-tutorial="delivery-selector">
       {/* LENGTH */}
-      <div className="flex flex-col p-3 rounded-xl gap-2" style={SECTION_STYLE}>
+      <div className="flex flex-col p-3 rounded-xl gap-2" style={SECTION_STYLE} data-tutorial="delivery-length">
         <p style={LABEL_STYLE}>LENGTH</p>
         <div className="grid grid-cols-2 gap-1.5">
           {DELIVERY_LENGTHS.map(({ value, label, hint }) => (
@@ -111,7 +111,7 @@ export default function DeliverySelector() {
       </div>
 
       {/* VARIATION */}
-      <div className="flex flex-col p-3 rounded-xl gap-2" style={SECTION_STYLE}>
+      <div className="flex flex-col p-3 rounded-xl gap-2" style={SECTION_STYLE} data-tutorial="delivery-variation">
         <p style={LABEL_STYLE}>VARIATION</p>
         <div className="grid grid-cols-2 gap-1.5">
           {DELIVERY_VARIATIONS.map(({ value, label, hint }) => (
@@ -128,7 +128,7 @@ export default function DeliverySelector() {
       </div>
 
       {/* LINE */}
-      <div className="flex flex-col p-3 rounded-xl gap-2" style={SECTION_STYLE}>
+      <div className="flex flex-col p-3 rounded-xl gap-2" style={SECTION_STYLE} data-tutorial="delivery-line">
         <p style={LABEL_STYLE}>LINE</p>
         <div className="flex flex-col gap-1">
           {DELIVERY_LINES.map(({ value, label }) => (

@@ -19,6 +19,7 @@ export default function MatchSituation() {
 
   return (
     <div
+      data-tutorial="match-situation"
       className="p-4 rounded-xl flex flex-col gap-3"
       style={{
         background: "rgba(10,15,13,0.9)",
@@ -110,7 +111,7 @@ function BallDots() {
   const totalSlots = ballLog.length + emptySlots;
 
   return (
-    <div className="flex gap-1 flex-wrap">
+    <div className="flex gap-1 flex-wrap" data-tutorial="ball-dots">
       {Array.from({ length: totalSlots }).map((_, i) => {
         const ball = ballLog[i];
         if (!ball) {
