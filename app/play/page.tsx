@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore } from "@/store/gameStore";
 import { useTutorialStore } from "@/store/tutorialStore";
@@ -15,6 +16,7 @@ import TutorialHint from "@/components/tutorial/TutorialHint";
 import type { BallOutcome } from "@/types/game";
 
 export default function PlayPage() {
+  const router = useRouter();
   const bowlDelivery = useGameStore((s) => s.bowlDelivery);
   const isComplete = useGameStore((s) => s.match.isComplete);
   const tutorialActive = useTutorialStore((s) => s.active);
@@ -73,9 +75,13 @@ export default function PlayPage() {
         className="flex items-center justify-between px-6 py-3"
         style={{ borderBottom: "1px solid #1a2e20" }}
       >
-        <span className="font-mono font-bold tracking-widest text-sm" style={{ color: "#00d4ff" }}>
+        <button
+          className="font-mono font-bold tracking-widest text-sm transition-opacity hover:opacity-70"
+          style={{ color: "#00d4ff", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          onClick={() => router.push("/")}
+        >
           DEATH OVER
-        </span>
+        </button>
         <span className="hidden sm:block font-mono text-xs" style={{ color: "#4a7a5a" }}>
           CHALLENGE MODE
         </span>

@@ -41,11 +41,10 @@ const HINTS: HintDef[] = [
     shouldShow: () => {
       const gs = useGameStore.getState();
       const log = gs.ballLog.filter((b) => !b.isExtraDelivery);
-      if (log.length < 2) return false;
-      const last3 = log.slice(-3);
-      return last3.every((b) => b.delivery.variation === "pace");
+      if (log.length < 3) return false;
+      return log.slice(-3).every((b) => b.delivery.variation === "pace");
     },
-    text: "You've bowled pace 3 times — try a Slower Ball variation to keep the AI guessing.",
+    text: "You've bowled pace 3 times in a row — try a Slower Ball to keep the AI guessing.",
   },
   {
     id: "hint_pressure",
@@ -96,9 +95,10 @@ export default function TutorialHint() {
           className="fixed pointer-events-auto"
           style={{
             zIndex: 50,
-            bottom: 80,
-            right: 16,
-            maxWidth: 260,
+            bottom: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            maxWidth: 300,
             background: "rgba(8,14,11,0.95)",
             border: "1px solid #ffcc0055",
             borderRadius: 10,
