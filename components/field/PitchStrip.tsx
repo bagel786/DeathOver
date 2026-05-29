@@ -4,17 +4,16 @@ export default function PitchStrip() {
   // BOTTOM (y≈58-63) = BOWLER'S end (bowler runs in from below)
   return (
     <g>
-      {/* Pitch surface */}
+      {/* Pitch surface — wireframe outline */}
       <rect
         x="45.5" y="37" width="9" height="26"
-        rx="0.5"
-        fill="#c8a96e"
-        stroke="#a08040"
-        strokeWidth="0.3"
+        fill="var(--ink)"
+        stroke="var(--paper)"
+        strokeWidth="0.4"
       />
 
       {/* Stumps — batsman end (TOP) */}
-      <g stroke="#ffffff" strokeWidth="0.35" opacity="0.9">
+      <g stroke="var(--paper)" strokeWidth="0.35" opacity="0.9">
         <line x1="48.8" y1="37" x2="48.8" y2="40" />
         <line x1="50"   y1="37" x2="50"   y2="40" />
         <line x1="51.2" y1="37" x2="51.2" y2="40" />
@@ -25,7 +24,7 @@ export default function PitchStrip() {
       {/* Popping crease (batsman end) */}
       <line
         x1="44" y1="42" x2="56" y2="42"
-        stroke="#ffffff"
+        stroke="var(--paper)"
         strokeWidth="0.3"
         opacity="0.6"
       />
@@ -33,7 +32,7 @@ export default function PitchStrip() {
       {/* Popping crease (bowler end) */}
       <line
         x1="44" y1="58" x2="56" y2="58"
-        stroke="#ffffff"
+        stroke="var(--paper)"
         strokeWidth="0.3"
         opacity="0.6"
       />
@@ -41,13 +40,13 @@ export default function PitchStrip() {
       {/* Bowling crease (bowler end, BOTTOM) */}
       <line
         x1="44" y1="60" x2="56" y2="60"
-        stroke="#ffffff"
+        stroke="var(--paper)"
         strokeWidth="0.4"
         opacity="0.8"
       />
 
       {/* Stumps — bowler end (BOTTOM) */}
-      <g stroke="#ffffff" strokeWidth="0.35" opacity="0.9">
+      <g stroke="var(--paper)" strokeWidth="0.35" opacity="0.9">
         <line x1="48.8" y1="60" x2="48.8" y2="63" />
         <line x1="50"   y1="60" x2="50"   y2="63" />
         <line x1="51.2" y1="60" x2="51.2" y2="63" />

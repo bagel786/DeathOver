@@ -9,7 +9,7 @@ interface SpotlightMaskProps {
   onClick?: () => void;
 }
 
-const TINT = "rgba(0,0,0,0.78)";
+const TINT = "rgba(0,0,0,0.86)";
 
 /**
  * Full-screen dark overlay with a live hole over the target element.
@@ -21,7 +21,7 @@ const TINT = "rgba(0,0,0,0.78)";
 export default function SpotlightMask({
   targetRect,
   padding = 10,
-  borderRadius = 10,
+  borderRadius = 0,
   onClick,
 }: SpotlightMaskProps) {
   if (!targetRect) {
@@ -57,26 +57,21 @@ export default function SpotlightMask({
       {/* Right strip (same row as hole) */}
       <div className="fixed right-0" style={{ ...clickProps.style, top: hy, left: hx + hw, height: hh, zIndex: 100 }} onClick={onClick} />
 
-      {/* Animated "LOOK AT ME" ring — pointer-events none so it doesn't block the hole */}
+      {/* Hard "LOOK AT ME" square outline — blinks white↔red, no glow. */}
       <motion.div
-        className="fixed pointer-events-none rounded-lg"
+        className="fixed pointer-events-none"
         style={{
           zIndex: 101,
-          left: hx - 2,
-          top: hy - 2,
-          width: hw + 4,
-          height: hh + 4,
-          borderRadius: borderRadius + 2,
+          left: hx - 3,
+          top: hy - 3,
+          width: hw + 6,
+          height: hh + 6,
+          borderRadius,
+          borderStyle: "solid",
+          borderWidth: 3,
         }}
-        animate={{
-          boxShadow: [
-            "0 0 0px 2px #00d4ff, 0 0 16px 6px rgba(0,212,255,0.35)",
-            "0 0 0px 3px #ffcc00, 0 0 24px 10px rgba(255,204,0,0.30)",
-            "0 0 0px 2px #00d4ff, 0 0 16px 6px rgba(0,212,255,0.35)",
-          ],
-          scale: [1, 1.012, 1],
-        }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        animate={{ borderColor: ["#ffffff", "#ffffff", "#ff0033", "#ff0033"] }}
+        transition={{ duration: 1, repeat: Infinity, ease: "linear", times: [0, 0.49, 0.5, 1] }}
       />
     </>
   );

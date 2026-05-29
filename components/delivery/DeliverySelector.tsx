@@ -30,16 +30,17 @@ const DELIVERY_LINES: { value: DeliveryLine; label: string }[] = [
 ];
 
 const SECTION_STYLE: React.CSSProperties = {
-  background: "rgba(10,15,13,0.9)",
-  border: "1px solid #1e3d2a",
-  backdropFilter: "blur(8px)",
+  background: "var(--ink)",
+  border: "2px solid var(--paper)",
 };
 
 const LABEL_STYLE: React.CSSProperties = {
-  color: "#6b8c76",
-  fontSize: "0.65rem",
-  fontFamily: "monospace",
-  letterSpacing: "0.12em",
+  color: "var(--muted)",
+  fontSize: "0.6rem",
+  fontWeight: 700,
+  fontFamily: "var(--mono)",
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
   marginBottom: "0.4rem",
 };
 
@@ -61,23 +62,17 @@ function SelectButton({
       disabled={disabled}
       onClick={onClick}
       title={hint}
-      className="relative px-2 py-1.5 rounded text-left text-xs font-mono transition-all duration-150"
+      className="relative px-2 py-2 text-left text-xs font-mono font-bold uppercase tracking-wide"
       style={{
-        background: active ? "rgba(0,212,255,0.15)" : "rgba(255,255,255,0.03)",
-        border: active ? "1px solid #00d4ff" : "1px solid #1e3d2a",
-        color: active ? "#00d4ff" : "#8aad96",
-        cursor: disabled ? "default" : "pointer",
+        background: active ? "var(--blood)" : "var(--ink)",
+        border: active ? "2px solid var(--blood)" : "2px solid var(--faint)",
+        color: active ? "var(--paper)" : "var(--muted)",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+        transition: "background-color 80ms steps(2), color 80ms steps(2), border-color 80ms steps(2)",
       }}
     >
       {label}
-      {active && (
-        <span
-          className="absolute top-0.5 right-1 text-[8px]"
-          style={{ color: "#00d4ff88" }}
-        >
-          ✓
-        </span>
-      )}
     </button>
   );
 }
@@ -94,7 +89,7 @@ export default function DeliverySelector() {
   return (
     <div className="flex flex-col gap-3" data-tutorial="delivery-selector">
       {/* LENGTH */}
-      <div className="flex flex-col p-3 rounded-xl gap-2" style={SECTION_STYLE} data-tutorial="delivery-length">
+      <div className="flex flex-col p-3 gap-2" style={SECTION_STYLE} data-tutorial="delivery-length">
         <p style={LABEL_STYLE}>LENGTH</p>
         <div className="grid grid-cols-2 gap-1.5">
           {DELIVERY_LENGTHS.map(({ value, label, hint }) => (
@@ -111,7 +106,7 @@ export default function DeliverySelector() {
       </div>
 
       {/* VARIATION */}
-      <div className="flex flex-col p-3 rounded-xl gap-2" style={SECTION_STYLE} data-tutorial="delivery-variation">
+      <div className="flex flex-col p-3 gap-2" style={SECTION_STYLE} data-tutorial="delivery-variation">
         <p style={LABEL_STYLE}>VARIATION</p>
         <div className="grid grid-cols-2 gap-1.5">
           {DELIVERY_VARIATIONS.map(({ value, label, hint }) => (
@@ -128,20 +123,22 @@ export default function DeliverySelector() {
       </div>
 
       {/* LINE */}
-      <div className="flex flex-col p-3 rounded-xl gap-2" style={SECTION_STYLE} data-tutorial="delivery-line">
+      <div className="flex flex-col p-3 gap-2" style={SECTION_STYLE} data-tutorial="delivery-line">
         <p style={LABEL_STYLE}>LINE</p>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           {DELIVERY_LINES.map(({ value, label }) => (
             <button
               key={value}
               disabled={isComplete}
               onClick={() => setDeliveryLine(value)}
-              className="px-3 py-1 rounded text-xs font-mono text-left transition-all duration-150"
+              className="px-3 py-2 text-xs font-mono font-bold uppercase tracking-wide text-left"
               style={{
-                background: selectedLine === value ? "rgba(0,212,255,0.12)" : "rgba(255,255,255,0.02)",
-                border: selectedLine === value ? "1px solid #00d4ff88" : "1px solid #1a2e20",
-                color: selectedLine === value ? "#00d4ff" : "#6b8c76",
-                cursor: isComplete ? "default" : "pointer",
+                background: selectedLine === value ? "var(--blood)" : "var(--ink)",
+                border: selectedLine === value ? "2px solid var(--blood)" : "2px solid var(--faint)",
+                color: selectedLine === value ? "var(--paper)" : "var(--muted)",
+                cursor: isComplete ? "not-allowed" : "pointer",
+                opacity: isComplete ? 0.4 : 1,
+                transition: "background-color 80ms steps(2), color 80ms steps(2), border-color 80ms steps(2)",
               }}
             >
               {label}

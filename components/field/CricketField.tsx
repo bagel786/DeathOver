@@ -120,83 +120,39 @@ export default function CricketField({
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
       >
-        {/* ── Field Base ── */}
-        <defs>
-          <radialGradient id="fieldGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#1a4a2e" />
-            <stop offset="80%" stopColor="#152e1e" />
-            <stop offset="100%" stopColor="#0d1f14" />
-          </radialGradient>
-          <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#00d4ff" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#00d4ff" stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id="vignetteGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="50%" stopColor="#0a0f0d" stopOpacity="0" />
-            <stop offset="100%" stopColor="#0a0f0d" stopOpacity="0.6" />
-          </radialGradient>
-          <filter id="fielderGlowFilter" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#00d4ff" floodOpacity="0.9" />
-          </filter>
-          <filter id="ballGlow" x="-100%" y="-100%" width="300%" height="300%">
-            <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#ffcc00" floodOpacity="1" />
-          </filter>
-        </defs>
+        {/* ── Wireframe Field Base ── */}
+        {/* Black fill, stark white vector lines only. No gradients, no glow. */}
 
-        {/* Outer boundary */}
+        {/* Outer boundary — thin white circle on ink */}
         <ellipse
           cx="50" cy="50" rx="47" ry="47"
-          fill="url(#fieldGrad)"
-          stroke="#2d6a45"
-          strokeWidth="0.8"
-        />
-
-        {/* Outer glow ring just inside boundary */}
-        <ellipse
-          cx="50" cy="50" rx="47" ry="47"
-          fill="none"
-          stroke="#00d4ff"
-          strokeWidth="0.3"
-          opacity="0.12"
+          fill="var(--ink)"
+          stroke="var(--paper)"
+          strokeWidth="0.5"
         />
 
         {/* 8 faint radial sector lines from center to boundary (every 45°) */}
         {/* Cricket polar: 0°=bowler/bottom, 90°=leg/right, 180°=keeper/top, 270°=off/left */}
         {/* Endpoints: x = 50 + 47*sin(α°), y = 50 + 47*cos(α°) */}
-        <g opacity="0.35">
-          {/* 0° → bowler end (50, 97) */}
-          <line x1="50" y1="50" x2="50" y2="97" stroke="#2a4a35" strokeWidth="0.3" opacity="0.4" />
-          {/* 45° → mid-wicket (83.23, 83.23) */}
-          <line x1="50" y1="50" x2="83.23" y2="83.23" stroke="#2a4a35" strokeWidth="0.3" opacity="0.4" />
-          {/* 90° → leg side (97, 50) */}
-          <line x1="50" y1="50" x2="97" y2="50" stroke="#2a4a35" strokeWidth="0.3" opacity="0.4" />
-          {/* 135° → fine leg (83.23, 16.77) */}
-          <line x1="50" y1="50" x2="83.23" y2="16.77" stroke="#2a4a35" strokeWidth="0.3" opacity="0.4" />
-          {/* 180° → keeper end (50, 3) */}
-          <line x1="50" y1="50" x2="50" y2="3" stroke="#2a4a35" strokeWidth="0.3" opacity="0.4" />
-          {/* 225° → gully / third man (16.77, 16.77) */}
-          <line x1="50" y1="50" x2="16.77" y2="16.77" stroke="#2a4a35" strokeWidth="0.3" opacity="0.4" />
-          {/* 270° → off side (3, 50) */}
-          <line x1="50" y1="50" x2="3" y2="50" stroke="#2a4a35" strokeWidth="0.3" opacity="0.4" />
-          {/* 315° → cover / long off (16.77, 83.23) */}
-          <line x1="50" y1="50" x2="16.77" y2="83.23" stroke="#2a4a35" strokeWidth="0.3" opacity="0.4" />
+        <g stroke="var(--paper)" strokeWidth="0.2" opacity="0.18">
+          <line x1="50" y1="50" x2="50" y2="97" />
+          <line x1="50" y1="50" x2="83.23" y2="83.23" />
+          <line x1="50" y1="50" x2="97" y2="50" />
+          <line x1="50" y1="50" x2="83.23" y2="16.77" />
+          <line x1="50" y1="50" x2="50" y2="3" />
+          <line x1="50" y1="50" x2="16.77" y2="16.77" />
+          <line x1="50" y1="50" x2="3" y2="50" />
+          <line x1="50" y1="50" x2="16.77" y2="83.23" />
         </g>
 
-        {/* 30-yard inner circle */}
+        {/* 30-yard inner circle — white dashed */}
         <ellipse
           cx="50" cy="50" rx="28" ry="28"
           fill="none"
-          stroke="#2d6a45"
-          strokeWidth="0.4"
-          strokeDasharray="2 2"
-          opacity="0.6"
-        />
-
-        {/* Subtle glow at center */}
-        <ellipse
-          cx="50" cy="50" rx="28" ry="28"
-          fill="url(#glowGrad)"
-          opacity="0.3"
+          stroke="var(--paper)"
+          strokeWidth="0.35"
+          strokeDasharray="1.5 1.5"
+          opacity="0.55"
         />
 
         {/* "KEEPER'S END" label (top — behind batsman, slip/keeper region) */}
@@ -204,9 +160,9 @@ export default function CricketField({
           x="50" y="1.75"
           textAnchor="middle"
           fontSize="2.2"
-          fill="#6b8c76"
-          letterSpacing="0.3"
-          fontFamily="monospace"
+          fill="var(--muted)"
+          letterSpacing="0.4"
+          fontFamily="var(--mono)"
         >
           KEEPER&apos;S END
         </text>
@@ -216,18 +172,18 @@ export default function CricketField({
           x="50" y="100"
           textAnchor="middle"
           fontSize="2.2"
-          fill="#6b8c76"
-          letterSpacing="0.3"
-          fontFamily="monospace"
+          fill="var(--muted)"
+          letterSpacing="0.4"
+          fontFamily="var(--mono)"
         >
           BOWLER&apos;S END
         </text>
 
         {/* OFF SIDE / LEG SIDE labels */}
-        <text x="5" y="52" fontSize="2" fill="#4a7a5a" fontFamily="monospace" opacity="0.7">
+        <text x="5" y="52" fontSize="2" fill="var(--faint)" fontFamily="var(--mono)" letterSpacing="0.2">
           OFF
         </text>
-        <text x="88" y="52" fontSize="2" fill="#4a7a5a" fontFamily="monospace" opacity="0.7">
+        <text x="88" y="52" fontSize="2" fill="var(--faint)" fontFamily="var(--mono)" letterSpacing="0.2">
           LEG
         </text>
 
@@ -252,11 +208,8 @@ export default function CricketField({
           )}
         </AnimatePresence>
 
-        {/* Vignette overlay (after all field elements, before fielders) */}
-        <ellipse cx="50" cy="50" rx="47" ry="47" fill="url(#vignetteGrad)" />
-
-        {/* Fielders — wrapped in glow filter group */}
-        <g filter="url(#fielderGlowFilter)">
+        {/* Fielders */}
+        <g>
           {fielders.map((fielder) => (
             <FielderToken
               key={fielder.id}
@@ -273,17 +226,17 @@ export default function CricketField({
         </g>
 
         {/* Wicket keeper (fixed, top — behind batsman at keeper's end) */}
-        <g opacity="0.7">
-          <circle cx="50" cy="32" r="1.4" fill="#888" stroke="#aaa" strokeWidth="0.3" />
-          <text x="50" y="29.5" textAnchor="middle" fontSize="1.8" fill="#888" fontFamily="monospace">
+        <g opacity="0.75">
+          <rect x="48.5" y="30.5" width="3" height="3" fill="none" stroke="var(--muted)" strokeWidth="0.3" />
+          <text x="50" y="29.2" textAnchor="middle" fontSize="1.8" fill="var(--muted)" fontFamily="var(--mono)">
             WK
           </text>
         </g>
 
         {/* Bowler (fixed, bottom — bowler's end) */}
-        <g opacity="0.5">
-          <circle cx="50" cy="68" r="1.2" fill="#666" stroke="#888" strokeWidth="0.3" />
-          <text x="50" y="71.65" textAnchor="middle" fontSize="1.8" fill="#666" fontFamily="monospace">
+        <g opacity="0.6">
+          <rect x="48.7" y="66.8" width="2.6" height="2.6" fill="none" stroke="var(--muted)" strokeWidth="0.3" />
+          <text x="50" y="72.4" textAnchor="middle" fontSize="1.8" fill="var(--muted)" fontFamily="var(--mono)">
             BWL
           </text>
         </g>
@@ -292,11 +245,11 @@ export default function CricketField({
 
       {/* Outside-circle counter — positioned outside the field diagram */}
       <div
-        className="absolute bottom-1 right-1 px-2 py-0.5 rounded text-xs font-mono font-bold tracking-wide"
+        className="absolute bottom-1 right-1 px-2 py-0.5 text-xs font-mono font-bold tracking-widest uppercase"
         style={{
-          background: atLimit ? "#ff444422" : "#00000066",
-          border: `1px solid ${atLimit ? "#ff4444" : "#2d6a45"}`,
-          color: atLimit ? "#ff4444" : "#6b8c76",
+          background: atLimit ? "var(--blood)" : "var(--ink)",
+          border: `2px solid ${atLimit ? "var(--blood)" : "var(--paper)"}`,
+          color: "var(--paper)",
         }}
       >
         {outerCount}/5 OUT
@@ -305,11 +258,11 @@ export default function CricketField({
       {/* Hover label tooltip */}
       {hoverLabel && (
         <div
-          className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded text-xs font-mono pointer-events-none z-10"
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-mono font-bold uppercase tracking-wide pointer-events-none z-10"
           style={{
-            background: "rgba(0,0,0,0.8)",
-            color: "#00d4ff",
-            border: "1px solid #00d4ff33",
+            background: "var(--paper)",
+            color: "var(--ink)",
+            border: "2px solid var(--paper)",
           }}
         >
           {hoverLabel}

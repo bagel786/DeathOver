@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Anton } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const anton = Anton({
-  weight: "400",
+const jetbrainsMono = JetBrains_Mono({
+  weight: ["400", "700", "800"],
   subsets: ["latin"],
-  variable: "--font-anton",
+  variable: "--font-mono",
 });
 
 export const viewport: Viewport = {
@@ -33,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`antialiased ${anton.variable}`}>{children}</body>
+      <body className={`antialiased ${jetbrainsMono.variable}`}>{children}</body>
     </html>
   );
 }

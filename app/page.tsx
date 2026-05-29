@@ -9,7 +9,7 @@ import type { DailyChallenge } from "@/types/game";
 
 function IconUsers() {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6b8c76" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--paper)" strokeWidth="1.8" strokeLinecap="square" strokeLinejoin="miter">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -20,7 +20,7 @@ function IconUsers() {
 
 function IconTarget() {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--blood)" strokeWidth="1.8" strokeLinecap="square" strokeLinejoin="miter">
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="6" />
       <circle cx="12" cy="12" r="2" />
@@ -30,7 +30,7 @@ function IconTarget() {
 
 function IconTrophy() {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffcc00" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--paper)" strokeWidth="1.8" strokeLinecap="square" strokeLinejoin="miter">
       <polyline points="8 17 12 21 16 17" />
       <line x1="12" y1="12" x2="12" y2="21" />
       <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29" />
@@ -145,7 +145,7 @@ export default function HomePage() {
   return (
     <main
       className="min-h-screen flex flex-col items-center justify-center gap-8 p-6"
-      style={{ background: "#000000" }}
+      style={{ background: "var(--ink)" }}
     >
       {showNewPlayerModal && (
         <NewPlayerModal
@@ -153,30 +153,27 @@ export default function HomePage() {
           onSkip={handleNewPlayerSkip}
         />
       )}
-      {/* Logo */}
-      <img
-        src="/logo.svg"
-        alt="The Death Over"
-        style={{ width: "clamp(80px, 16vw, 130px)", height: "auto", display: "block", margin: "0 auto" }}
-      />
 
       {/* Title */}
-      <div className="text-center">
+      <div className="text-center w-full" style={{ maxWidth: 720 }}>
+        <p className="brut-label" style={{ color: "var(--blood)", marginBottom: 12 }}>
+          ▚▚ TACTICAL CRICKET SIMULATOR ▚▚
+        </p>
         <h1
+          className="brut-data-xl"
           style={{
-            fontFamily: "var(--font-anton), Impact, sans-serif",
-            fontSize: "clamp(56px, 12vw, 120px)",
-            lineHeight: 1,
-            letterSpacing: "0.02em",
-            color: "#ffffff",
+            fontSize: "clamp(48px, 11vw, 110px)",
+            lineHeight: 0.92,
+            color: "var(--paper)",
             textTransform: "uppercase",
           }}
         >
           THE DEATH OVER
           <br />
-          <span style={{ color: "#00d4ff" }}>CHALLENGE</span>
+          <span style={{ color: "var(--blood)" }}>CHALLENGE</span>
         </h1>
-        <p className="font-mono text-sm mt-4" style={{ color: "#6b8c76", maxWidth: 480, margin: "16px auto 0" }}>
+        <hr className="brut-rule" style={{ margin: "20px auto", maxWidth: 480 }} />
+        <p className="font-mono text-sm" style={{ color: "var(--muted)", maxWidth: 480, margin: "0 auto" }}>
           Set your field. Pick your delivery. Bluff the batsman.
           <br />
           Defend your total in the final over — or watch it slip away.
@@ -184,54 +181,44 @@ export default function HomePage() {
       </div>
 
       {/* Mode buttons */}
-      <div className="flex flex-col gap-3 w-full" style={{ maxWidth: 400 }}>
+      <div className="flex flex-col gap-4 w-full" style={{ maxWidth: 400 }}>
         <button
           onClick={handleDailyChallenge}
           disabled={loading}
-          className="w-full py-4 rounded-2xl font-mono font-bold text-sm tracking-widest text-center transition-all"
-          style={{
-            background: "linear-gradient(135deg, #00d4ff18, #00d4ff30)",
-            border: "1px solid #00d4ff",
-            color: "#00d4ff",
-            boxShadow: "0 0 30px rgba(0,212,255,0.1)",
-            opacity: loading ? 0.6 : 1,
-            cursor: loading ? "wait" : "pointer",
-          }}
+          className="brut-btn brut-btn--primary w-full text-sm"
+          style={{ padding: "1rem", letterSpacing: "0.2em", opacity: loading ? 0.6 : 1, cursor: loading ? "wait" : "pointer" }}
         >
           {loading ? "LOADING..." : "DAILY CHALLENGE"}
-          <span className="block text-xs font-normal mt-0.5" style={{ color: "#00d4ff88" }}>
-            Defend a new total every day!
+          <span className="block text-[10px] font-normal mt-1" style={{ opacity: 0.85 }}>
+            DEFEND A NEW TOTAL EVERY DAY
           </span>
         </button>
 
         {error && (
-          <p className="text-xs font-mono text-center" style={{ color: "#ff4444" }}>
+          <p className="text-xs font-mono font-bold text-center uppercase tracking-widest" style={{ color: "var(--blood)" }}>
             {error}
           </p>
         )}
 
-        <div
-          className="w-full rounded-2xl overflow-hidden"
-          style={{ border: "1px solid #1e3d2a", background: "#ffffff05" }}
-        >
+        <div className="w-full" style={{ border: "2px solid var(--paper)" }}>
           <button
             onClick={() => setShowCustom((v) => !v)}
-            className="w-full py-3.5 font-mono text-sm tracking-widest text-center"
-            style={{ color: "#6b8c76", cursor: "pointer", background: "transparent", border: "none" }}
+            className="w-full py-3.5 font-mono font-bold text-sm tracking-widest text-center uppercase"
+            style={{ color: "var(--paper)", cursor: "pointer", background: "var(--ink)", border: "none" }}
           >
             CUSTOM GAME
-            <span className="block text-xs mt-0.5" style={{ color: "#4a7a5a" }}>
-              {showCustom ? "Hide options ▲" : "Set your own target ▼"}
+            <span className="block text-[10px] mt-1" style={{ color: "var(--muted)" }}>
+              {showCustom ? "[ − ] HIDE OPTIONS" : "[ + ] SET YOUR OWN TARGET"}
             </span>
           </button>
 
           {showCustom && (
-            <div className="px-5 pb-5 flex flex-col gap-4" style={{ borderTop: "1px solid #1e3d2a" }}>
+            <div className="px-5 pb-5 flex flex-col gap-4" style={{ borderTop: "2px solid var(--paper)" }}>
               {/* Target runs */}
               <div className="flex flex-col gap-2 pt-4">
-                <div className="flex justify-between items-center font-mono text-xs" style={{ color: "#6b8c76" }}>
+                <div className="flex justify-between items-center brut-label">
                   <span>RUNS TO DEFEND</span>
-                  <span style={{ color: "#00d4ff", fontSize: 18, fontWeight: "bold" }}>{customTarget}</span>
+                  <span className="brut-data-xl" style={{ color: "var(--blood)", fontSize: 22 }}>{customTarget}</span>
                 </div>
                 <input
                   type="range"
@@ -239,18 +226,19 @@ export default function HomePage() {
                   max={36}
                   value={customTarget}
                   onChange={(e) => setCustomTarget(Number(e.target.value))}
-                  className="w-full accent-cyan-400"
+                  className="w-full"
+                  style={{ accentColor: "var(--blood)" }}
                 />
-                <div className="flex justify-between font-mono text-[10px]" style={{ color: "#4a7a5a" }}>
+                <div className="flex justify-between font-mono text-[10px]" style={{ color: "var(--faint)" }}>
                   <span>6</span><span>36</span>
                 </div>
               </div>
 
               {/* Wickets remaining */}
               <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center font-mono text-xs" style={{ color: "#6b8c76" }}>
+                <div className="flex justify-between items-center brut-label">
                   <span>WICKETS IN HAND</span>
-                  <span style={{ color: "#00d4ff", fontSize: 18, fontWeight: "bold" }}>{customWickets}</span>
+                  <span className="brut-data-xl" style={{ color: "var(--blood)", fontSize: 22 }}>{customWickets}</span>
                 </div>
                 <input
                   type="range"
@@ -258,23 +246,15 @@ export default function HomePage() {
                   max={10}
                   value={customWickets}
                   onChange={(e) => setCustomWickets(Number(e.target.value))}
-                  className="w-full accent-cyan-400"
+                  className="w-full"
+                  style={{ accentColor: "var(--blood)" }}
                 />
-                <div className="flex justify-between font-mono text-[10px]" style={{ color: "#4a7a5a" }}>
+                <div className="flex justify-between font-mono text-[10px]" style={{ color: "var(--faint)" }}>
                   <span>1</span><span>10</span>
                 </div>
               </div>
 
-              <button
-                onClick={handleCustomGame}
-                className="w-full py-3 rounded-xl font-mono font-bold text-sm tracking-widest"
-                style={{
-                  background: "linear-gradient(135deg, #1e3d2a, #2a5a3a)",
-                  border: "1px solid #3a7a4a",
-                  color: "#00d4ff",
-                  cursor: "pointer",
-                }}
-              >
+              <button onClick={handleCustomGame} className="brut-btn w-full text-sm">
                 START GAME
               </button>
             </div>
@@ -285,48 +265,47 @@ export default function HomePage() {
       {/* HOW TO PLAY — always accessible tutorial entry */}
       <button
         onClick={handleHowToPlay}
-        className="font-mono text-xs tracking-widest py-2 px-5 rounded-xl transition-colors"
+        className="font-mono font-bold text-xs tracking-widest py-2 px-5 uppercase"
         style={{
-          border: "1px solid #1e3d2a",
-          color: "#4a7a5a",
-          background: "transparent",
+          border: "2px solid var(--faint)",
+          color: "var(--muted)",
+          background: "var(--ink)",
           cursor: "pointer",
         }}
       >
-        HOW TO PLAY
-        <span className="ml-2" style={{ color: "#2d4a35" }}>→</span>
+        HOW TO PLAY →
       </button>
 
       {/* Play stats */}
       {stats && (
-        <p className="font-mono text-xs text-center" style={{ color: "#4a7a5a" }}>
-          <span style={{ color: "#6b8c76" }}>{stats.total_plays.toLocaleString()}</span> games played
-          {" · "}
-          <span style={{ color: "#6b8c76" }}>{stats.unique_users.toLocaleString()}</span> players
+        <p className="font-mono text-xs text-center uppercase tracking-widest" style={{ color: "var(--faint)" }}>
+          <span style={{ color: "var(--paper)" }}>{stats.total_plays.toLocaleString()}</span> GAMES
+          {" // "}
+          <span style={{ color: "var(--paper)" }}>{stats.unique_users.toLocaleString()}</span> PLAYERS
         </p>
       )}
 
       {/* How it works */}
       <div
-        className="grid grid-cols-3 gap-3 sm:gap-6 p-5 rounded-2xl font-mono"
-        style={{
-          background: "#0d0d0d",
-          border: "1px solid #1a2e20",
-          maxWidth: 480,
-          width: "100%",
-        }}
+        className="grid grid-cols-3 font-mono w-full"
+        style={{ border: "2px solid var(--paper)", maxWidth: 480 }}
       >
         {[
-          { Icon: IconUsers, title: "PLACE 9", sub: "Drag fielders into position" },
-          { Icon: IconTarget, title: "DECEIVE", sub: "Bluff the AI batsman" },
-          { Icon: IconTrophy, title: "DEFEND", sub: "Keep the runs down" },
-        ].map(({ Icon, title, sub }) => (
-          <div key={title} className="flex flex-col items-center text-center gap-2">
+          { Icon: IconUsers, title: "PLACE 9", sub: "Drag fielders into position", n: "01" },
+          { Icon: IconTarget, title: "DECEIVE", sub: "Bluff the AI batsman", n: "02" },
+          { Icon: IconTrophy, title: "DEFEND", sub: "Keep the runs down", n: "03" },
+        ].map(({ Icon, title, sub, n }, i) => (
+          <div
+            key={title}
+            className="flex flex-col items-center text-center gap-2 p-4"
+            style={{ borderLeft: i === 0 ? "none" : "2px solid var(--paper)" }}
+          >
+            <span className="brut-label" style={{ color: "var(--blood)" }}>{n}</span>
             <Icon />
-            <span className="text-xs font-bold tracking-widest" style={{ color: "#e8f5ee" }}>
+            <span className="text-xs font-bold tracking-widest" style={{ color: "var(--paper)" }}>
               {title}
             </span>
-            <span className="text-[10px]" style={{ color: "#4a7a5a" }}>{sub}</span>
+            <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--muted)" }}>{sub}</span>
           </div>
         ))}
       </div>

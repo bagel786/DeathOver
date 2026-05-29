@@ -34,13 +34,10 @@ export default function BallTracer({ outcome, onComplete }: BallTracerProps) {
   const endX = POLAR_CX + Math.sin(angleRad) * dist;
   const endY = POLAR_CY + Math.cos(angleRad) * dist;
 
-  // Ball colour by outcome
-  const ballColor =
-    isWicket ? "#ff4444"
-    : runsScored >= 6 ? "#9c27b0"
-    : runsScored >= 4 ? "#ff9800"
-    : runsScored > 0 ? "#ffcc00"
-    : "#4fc3f7";
+  // Ball colour by outcome — strict palette. Boundaries/wickets bleed red;
+  // everything else is stark white.
+  const isBoundary = runsScored >= 4;
+  const ballColor = isWicket || isBoundary ? "var(--blood)" : "var(--paper)";
 
   // Trajectory line length for strokeDasharray
   const dx = endX - BAT_X, dy = endY - BAT_Y;
@@ -60,85 +57,66 @@ export default function BallTracer({ outcome, onComplete }: BallTracerProps) {
       {/* Trajectory + moving ball — omitted for bowled/LBW (ball hits stumps, not outfield) */}
       {!isBowledOrLBW && (
         <>
-          {/* Glow trail behind the trajectory line */}
+          {/* Trajectory line — hard, no glow; animates drawing via strokeDashoffset */}
           <motion.line
             x1={BAT_X} y1={BAT_Y}
             x2={endX} y2={endY}
             stroke={ballColor}
-            strokeWidth="2"
-            strokeDasharray="3 2"
-            filter="url(#ballGlow)"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.3, 0.3, 0] }}
-            transition={{ duration: 0.9, times: [0, 0.15, 0.7, 1] }}
-          />
-
-          {/* Trajectory line — animates drawing via strokeDashoffset */}
-          <motion.line
-            x1={BAT_X} y1={BAT_Y}
-            x2={endX} y2={endY}
-            stroke={ballColor}
-            strokeWidth="0.5"
+            strokeWidth="0.6"
             strokeDasharray={lineLength}
             initial={{ strokeDashoffset: lineLength, opacity: 0 }}
             animate={{
               strokeDashoffset: 0,
-              opacity: [0, 0.7, 0.7, 0],
+              opacity: [0, 1, 1, 0],
             }}
             transition={{
-              strokeDashoffset: { duration: 0.5, ease: "easeOut" },
+              strokeDashoffset: { duration: 0.5, ease: "linear" },
               opacity: { duration: 0.9, times: [0, 0.1, 0.7, 1] },
             }}
           />
 
-          {/* Moving ball dot */}
-          <motion.circle
-            r="1.8"
+          {/* Moving ball — a square, not a glowing dot */}
+          <motion.rect
+            width="2.4" height="2.4"
             fill={ballColor}
-            filter="url(#ballGlow)"
-            initial={{ cx: BAT_X, cy: BAT_Y, opacity: 1 }}
+            initial={{ x: BAT_X - 1.2, y: BAT_Y - 1.2, opacity: 1 }}
             animate={{
-              cx: endX,
-              cy: endY,
+              x: endX - 1.2,
+              y: endY - 1.2,
               opacity: [1, 1, 0],
             }}
             transition={{
-              cx: { duration: 0.5, ease: "easeOut" },
-              cy: { duration: 0.5, ease: "easeOut" },
+              x: { duration: 0.5, ease: "linear" },
+              y: { duration: 0.5, ease: "linear" },
               opacity: { duration: 0.9, times: [0, 0.75, 1] },
             }}
           />
         </>
       )}
 
-      {/* Wicket flash at batsman's stumps (y≈40) */}
+      {/* Wicket flash at batsman's stumps (y≈40) — hard red square */}
       {isWicket && (
-        <motion.circle
-          cx="50" cy="40"
-          fill="#ff4444"
-          initial={{ r: 0, opacity: 0.8 }}
-          animate={{ r: [0, 8, 0], opacity: [0.8, 0.8, 0] }}
-          transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+        <motion.rect
+          fill="var(--blood)"
+          initial={{ x: 50, y: 40, width: 0, height: 0, opacity: 0.9 }}
+          animate={{ x: [50, 42, 50], y: [40, 32, 40], width: [0, 16, 0], height: [0, 16, 0], opacity: [0.9, 0.9, 0] }}
+          transition={{ duration: 0.5, delay: 0.3, ease: "linear" }}
         />
       )}
 
-      {/* Impact flash at destination for boundaries */}
-      {runsScored >= 6 && (
-        <motion.circle
-          cx={endX} cy={endY}
-          fill={ballColor}
-          initial={{ r: 0, opacity: 0 }}
-          animate={{ r: [0, 8, 0], opacity: [0, 0.7, 0] }}
-          transition={{ duration: 0.4, delay: 0.5, ease: "easeOut" }}
-        />
-      )}
-      {runsScored === 4 && (
-        <motion.circle
-          cx={endX} cy={endY}
-          fill={ballColor}
-          initial={{ r: 0, opacity: 0 }}
-          animate={{ r: [0, 4, 0], opacity: [0, 0.5, 0] }}
-          transition={{ duration: 0.4, delay: 0.5, ease: "easeOut" }}
+      {/* Impact flash at destination for boundaries — hard red square */}
+      {isBoundary && (
+        <motion.rect
+          fill="var(--blood)"
+          initial={{ x: endX, y: endY, width: 0, height: 0, opacity: 0 }}
+          animate={{
+            x: [endX, endX - (runsScored >= 6 ? 7 : 4), endX],
+            y: [endY, endY - (runsScored >= 6 ? 7 : 4), endY],
+            width: [0, runsScored >= 6 ? 14 : 8, 0],
+            height: [0, runsScored >= 6 ? 14 : 8, 0],
+            opacity: [0, 0.8, 0],
+          }}
+          transition={{ duration: 0.4, delay: 0.5, ease: "linear" }}
         />
       )}
     </g>

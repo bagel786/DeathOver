@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useGameStore } from "@/store/gameStore";
 import { generateEmojiSummary, calculateScore } from "@/engine/simulation";
+import { getOutcomeCell, type OutcomeLike } from "@/lib/outcomeStyle";
 import type { BallOutcome, LeaderboardEntry } from "@/types/game";
 
 /** Returns a persistent anonymous user ID stored in localStorage. */
@@ -128,32 +129,31 @@ export default function ResultScreen() {
   };
 
   const titleMap = {
-    won:  { text: "DEFENDED!", color: "#00d4ff", sub: "You kept them out. Well bowled, captain." },
-    lost: { text: "CHASED DOWN", color: "#ff4444", sub: "They got there. Review your field next time." },
-    tied: { text: "TIED!", color: "#ffcc00", sub: "One run either way. What a finish." },
+    won:  { text: "DEFENDED", color: "var(--paper)", sub: "You kept them out. Well bowled, captain." },
+    lost: { text: "CHASED DOWN", color: "var(--blood)", sub: "They got there. Review your field next time." },
+    tied: { text: "TIED", color: "var(--blood)", sub: "One run either way. What a finish." },
   };
   const { text, color, sub } = titleMap[result];
 
   return (
     <main
       className="min-h-screen flex flex-col items-center justify-center gap-6 p-6"
-      style={{ background: "#0a0f0d" }}
+      style={{ background: "var(--ink)" }}
     >
       {/* Result heading */}
-      <div className="text-center">
-        <h1
-          className="font-mono font-black tracking-widest"
-          style={{ fontSize: "clamp(36px, 8vw, 64px)", color }}
-        >
+      <div className="text-center w-full" style={{ maxWidth: 560 }}>
+        <p className="brut-label" style={{ color: "var(--blood)", marginBottom: 8 }}>▚▚ RESULT ▚▚</p>
+        <h1 className="brut-data-xl" style={{ fontSize: "clamp(40px, 9vw, 72px)", color }}>
           {text}
         </h1>
-        <p className="font-mono mt-2" style={{ color: "#6b8c76" }}>{sub}</p>
+        <hr className="brut-rule" style={{ margin: "16px auto", maxWidth: 360 }} />
+        <p className="font-mono text-sm" style={{ color: "var(--muted)" }}>{sub}</p>
       </div>
 
-      {/* Stats */}
+      {/* Stats — white background shows through 2px gaps as grid rules */}
       <div
-        className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-6 rounded-2xl w-full"
-        style={{ background: "#111a14", border: "1px solid #1e3d2a" }}
+        className="grid grid-cols-2 sm:grid-cols-4 w-full"
+        style={{ border: "2px solid var(--paper)", background: "var(--paper)", gap: 2, maxWidth: 560 }}
       >
         <StatCard label="RUNS GIVEN" value={match.runsConceded} />
         <StatCard label="WICKETS" value={match.wicketsTaken} />
@@ -161,11 +161,8 @@ export default function ResultScreen() {
         <StatCard label="SCORE" value={score} highlight />
       </div>
 
-      {/* Ball-by-ball circle grid */}
-      <div
-        className="p-4 rounded-xl"
-        style={{ background: "#111a14", border: "1px solid #1e3d2a" }}
-      >
+      {/* Ball-by-ball grid */}
+      <div className="p-4" style={{ border: "2px solid var(--paper)" }}>
         <div className="flex gap-2 flex-wrap justify-center">
           {ballLog.map((ball, i) => (
             <BallCircle key={i} ball={ball} />
@@ -176,45 +173,37 @@ export default function ResultScreen() {
       {/* Leaderboard submission (daily only) */}
       {isDaily && !submitted && (
         <div
-          className="flex flex-col gap-3 items-center p-5 rounded-2xl w-full"
-          style={{ background: "#111a14", border: "1px solid #1e3d2a", maxWidth: 400 }}
+          className="flex flex-col gap-3 items-center p-5 w-full"
+          style={{ border: "2px solid var(--paper)", maxWidth: 400 }}
         >
-          <p className="font-mono text-xs tracking-widest" style={{ color: "#00d4ff88" }}>
-            SUBMIT YOUR SCORE
-          </p>
+          <p className="brut-label" style={{ color: "var(--blood)" }}>SUBMIT YOUR SCORE</p>
           <input
             type="text"
-            placeholder="Your name..."
+            placeholder="YOUR NAME..."
             maxLength={30}
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-lg font-mono text-sm"
+            className="w-full px-4 py-2.5 font-mono text-sm uppercase"
             style={{
-              background: "#0a0f0d",
-              border: "1px solid #1e3d2a",
-              color: "#e8f5ee",
+              background: "var(--ink)",
+              border: "2px solid var(--faint)",
+              color: "var(--paper)",
               outline: "none",
             }}
           />
-          <p className="self-end text-xs font-mono" style={{ color: "#4a7a5a" }}>
-            {30 - displayName.length} left
+          <p className="self-end text-[10px] font-mono uppercase tracking-widest" style={{ color: "var(--faint)" }}>
+            {30 - displayName.length} LEFT
           </p>
           <button
             onClick={handleSubmitScore}
             disabled={!displayName.trim() || submitting}
-            className="w-full py-2.5 rounded-xl font-mono font-bold text-sm tracking-widest transition-all"
-            style={{
-              background: displayName.trim() ? "#00d4ff22" : "#ffffff05",
-              border: `1px solid ${displayName.trim() ? "#00d4ff" : "#1e3d2a"}`,
-              color: displayName.trim() ? "#00d4ff" : "#4a7a5a",
-              opacity: submitting ? 0.6 : 1,
-              cursor: displayName.trim() ? "pointer" : "not-allowed",
-            }}
+            className={`brut-btn w-full text-sm${displayName.trim() ? " brut-btn--primary" : ""}`}
+            style={{ opacity: submitting ? 0.6 : 1 }}
           >
             {submitting ? "SUBMITTING..." : "SUBMIT"}
           </button>
           {submitError && (
-            <p className="text-xs font-mono text-center" style={{ color: "#ff4444" }}>
+            <p className="text-xs font-mono font-bold text-center uppercase tracking-wide" style={{ color: "var(--blood)" }}>
               {submitError}
             </p>
           )}
@@ -222,28 +211,23 @@ export default function ResultScreen() {
       )}
 
       {submitted && (
-        <p className="font-mono text-xs tracking-widest" style={{ color: "#00d4ff" }}>
-          SCORE SUBMITTED!
+        <p className="brut-label" style={{ color: "var(--blood)" }}>
+          ✓ SCORE SUBMITTED
         </p>
       )}
 
       {/* Leaderboard (daily only) */}
       {isDaily && (loadingBoard || leaderboard.length > 0) && (
-        <div
-          className="w-full rounded-2xl overflow-hidden"
-          style={{ background: "#111a14", border: "1px solid #1e3d2a", maxWidth: 480 }}
-        >
-          <div className="px-5 py-3" style={{ borderBottom: "1px solid #1e3d2a" }}>
-            <p className="font-mono text-xs font-bold tracking-widest" style={{ color: "#00d4ff88" }}>
-              LEADERBOARD
-            </p>
+        <div className="w-full" style={{ border: "2px solid var(--paper)", maxWidth: 480 }}>
+          <div className="px-5 py-3" style={{ borderBottom: "2px solid var(--paper)" }}>
+            <p className="brut-label" style={{ color: "var(--blood)" }}>LEADERBOARD</p>
           </div>
           {loadingBoard && leaderboard.length === 0 ? (
-            <p className="text-center py-4 font-mono text-xs" style={{ color: "#4a7a5a" }}>
+            <p className="text-center py-4 font-mono text-xs uppercase tracking-widest" style={{ color: "var(--muted)" }}>
               Loading leaderboard...
             </p>
           ) : leaderboardError && leaderboard.length === 0 ? (
-            <p className="text-center py-4 font-mono text-xs" style={{ color: "#ff4444" }}>
+            <p className="text-center py-4 font-mono text-xs uppercase tracking-widest" style={{ color: "var(--blood)" }}>
               Failed to load leaderboard.
             </p>
           ) : (
@@ -253,26 +237,24 @@ export default function ResultScreen() {
                   key={entry.id}
                   className="flex items-center justify-between px-5 py-2.5 font-mono text-sm"
                   style={{
-                    borderBottom: i < Math.min(leaderboard.length, 20) - 1 ? "1px solid #1a2e2011" : undefined,
+                    borderBottom: i < Math.min(leaderboard.length, 20) - 1 ? "1px solid var(--hair)" : undefined,
+                    background: i === 0 ? "var(--blood-wash)" : undefined,
                   }}
                 >
                   <div className="flex items-center gap-3">
                     <span
                       className="font-bold"
-                      style={{
-                        color: i === 0 ? "#ffcc00" : i === 1 ? "#c0c0c0" : i === 2 ? "#cd7f32" : "#4a7a5a",
-                        minWidth: 20,
-                      }}
+                      style={{ color: i === 0 ? "var(--blood)" : "var(--muted)", minWidth: 24, fontVariantNumeric: "tabular-nums" }}
                     >
-                      {i + 1}
+                      {String(i + 1).padStart(2, "0")}
                     </span>
-                    <span style={{ color: "#e8f5ee" }}>{entry.display_name}</span>
+                    <span className="uppercase tracking-wide" style={{ color: "var(--paper)" }}>{entry.display_name}</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-xs" style={{ color: "#6b8c76" }}>
+                    <span className="text-xs" style={{ color: "var(--muted)" }}>
                       {entry.runs_conceded}/{entry.wickets_taken} ({entry.balls_used}b)
                     </span>
-                    <span className="font-bold" style={{ color: "#00d4ff" }}>
+                    <span className="font-bold" style={{ color: "var(--blood)", fontVariantNumeric: "tabular-nums" }}>
                       {entry.score}
                     </span>
                   </div>
@@ -281,7 +263,7 @@ export default function ResultScreen() {
             </div>
           )}
           {loadingBoard && leaderboard.length > 0 && (
-            <p className="text-center py-3 font-mono text-xs" style={{ color: "#4a7a5a" }}>
+            <p className="text-center py-3 font-mono text-xs uppercase tracking-widest" style={{ color: "var(--muted)" }}>
               Refreshing...
             </p>
           )}
@@ -290,39 +272,15 @@ export default function ResultScreen() {
 
       {/* Actions */}
       <div className="flex gap-3 flex-wrap justify-center">
-        <button
-          onClick={handleCopy}
-          className="px-6 py-2.5 rounded-xl font-mono font-bold text-sm tracking-widest transition-all"
-          style={{
-            background: copied ? "#00d4ff33" : "#00d4ff22",
-            border: "1px solid #00d4ff",
-            color: "#00d4ff",
-          }}
-        >
+        <button onClick={handleCopy} className="brut-btn brut-btn--primary text-sm">
           {copied ? "COPIED!" : "SHARE RESULT"}
         </button>
 
-        <button
-          onClick={resetGame}
-          className="px-6 py-2.5 rounded-xl font-mono text-sm tracking-widest transition-all"
-          style={{
-            background: "#ffffff08",
-            border: "1px solid #1e3d2a",
-            color: "#6b8c76",
-          }}
-        >
+        <button onClick={resetGame} className="brut-btn text-sm">
           PLAY AGAIN
         </button>
 
-        <Link
-          href="/"
-          className="px-6 py-2.5 rounded-xl font-mono text-sm tracking-widest"
-          style={{
-            background: "#ffffff05",
-            border: "1px solid #1a2e20",
-            color: "#4a7a5a",
-          }}
-        >
+        <Link href="/" className="brut-btn text-sm flex items-center">
           HOME
         </Link>
       </div>
@@ -331,79 +289,35 @@ export default function ResultScreen() {
 }
 
 function BallCircle({ ball }: { ball: BallOutcome }) {
-  let bg: string;
-  let border: string;
-  let label: string;
-  let textColor = "#0a0f0d";
-
-  if (ball.isWicket) {
-    bg = "#c0392b";
-    border = "#e74c3c";
-    label = "W";
-    textColor = "#fff";
-  } else if (ball.chaosEvent === "dropped_catch" || ball.chaosEvent === "overthrow" || ball.chaosEvent === "misfield") {
-    bg = "#e67e22";
-    border = "#f39c12";
-    label = String(ball.runsScored);
-    textColor = "#fff";
-  } else if (ball.runsScored === 0) {
-    bg = "#1a3a2a";
-    border = "#2e6b44";
-    label = "\u2022";
-    textColor = "#4caf78";
-  } else if (ball.runsScored <= 2) {
-    bg = "#b8860b";
-    border = "#f0c030";
-    label = String(ball.runsScored);
-    textColor = "#fff8e0";
-  } else if (ball.runsScored === 4) {
-    bg = "#8b0000";
-    border = "#e53935";
-    label = "4";
-    textColor = "#fff";
-  } else if (ball.runsScored >= 6) {
-    bg = "#6a0000";
-    border = "#ff1744";
-    label = "6";
-    textColor = "#fff";
-  } else {
-    bg = "#b8860b";
-    border = "#f0c030";
-    label = String(ball.runsScored);
-    textColor = "#fff8e0";
-  }
-
+  const cell = getOutcomeCell(ball as OutcomeLike);
   return (
     <div
-      className="flex items-center justify-center rounded-full font-mono font-black select-none"
+      className="flex items-center justify-center font-mono font-black select-none"
       style={{
-        width: 48,
-        height: 48,
-        background: bg,
-        border: `2px solid ${border}`,
-        color: textColor,
-        fontSize: label === "\u2022" ? 28 : 16,
+        width: 44,
+        height: 44,
+        background: cell.fill,
+        border: `2px solid ${cell.border}`,
+        color: cell.text,
+        fontSize: cell.label === "\u00b7" ? 28 : 16,
         letterSpacing: 0,
-        boxShadow: `0 0 8px ${border}55`,
       }}
     >
-      {label}
+      {cell.label}
     </div>
   );
 }
 
 function StatCard({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1 py-5" style={{ background: "var(--ink)" }}>
       <span
-        className="font-mono font-black"
-        style={{ fontSize: "clamp(24px, 5vw, 36px)", color: highlight ? "#00d4ff" : "#e8f5ee" }}
+        className="brut-data-xl"
+        style={{ fontSize: "clamp(24px, 5vw, 36px)", color: highlight ? "var(--blood)" : "var(--paper)" }}
       >
         {value}
       </span>
-      <span className="text-xs font-mono tracking-widest" style={{ color: "#4a7a5a" }}>
-        {label}
-      </span>
+      <span className="brut-label">{label}</span>
     </div>
   );
 }

@@ -76,19 +76,18 @@ function FielderDragDemo({
 
   return (
     <motion.div
-      className="fixed pointer-events-none rounded-full"
+      className="fixed pointer-events-none"
       style={{
         zIndex: 105,
         left: ghostPos.x - 12,
         top: ghostPos.y - 12,
         width: 24,
         height: 24,
-        background: isReturning ? "rgba(79,195,247,0.25)" : "rgba(79,195,247,0.55)",
-        border: "2px solid #4fc3f7",
-        boxShadow: "0 0 12px rgba(79,195,247,0.6)",
+        background: isReturning ? "var(--ink)" : "var(--blood)",
+        border: "2px solid var(--blood)",
       }}
-      animate={isReturning ? { scale: 0.8 } : { scale: [1, 1.15, 1] }}
-      transition={isReturning ? { duration: 0.2 } : { duration: 0.6, repeat: Infinity }}
+      animate={isReturning ? { scale: 0.8 } : { scale: [1, 1.12, 1] }}
+      transition={isReturning ? { duration: 0.2 } : { duration: 0.6, repeat: Infinity, ease: "linear" }}
     />
   );
 }
@@ -178,18 +177,18 @@ function ButtonClickDemo({
       {/* Click ripple */}
       {clicking && targetRect && (
         <motion.div
-          className="fixed pointer-events-none rounded-full"
+          className="fixed pointer-events-none"
           style={{
             zIndex: 104,
             left: targetRect.left + targetRect.width / 2 - 20,
             top: targetRect.top + targetRect.height / 2 - 20,
             width: 40,
             height: 40,
-            border: "2px solid #00d4ff",
+            border: "3px solid var(--blood)",
           }}
           initial={{ scale: 0.3, opacity: 1 }}
-          animate={{ scale: 2.5, opacity: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          animate={{ scale: 2.2, opacity: 0 }}
+          transition={{ duration: 0.4, ease: "linear" }}
         />
       )}
     </>

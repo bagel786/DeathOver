@@ -20,7 +20,7 @@ function ArrowIndicator({ direction, targetRect }: { direction: ArrowPosition; t
     position: "fixed",
     zIndex: 103,
     pointerEvents: "none",
-    color: "#00d4ff",
+    color: "var(--blood)",
     fontSize: 28,
     fontWeight: "bold",
   };
@@ -184,59 +184,52 @@ export default function TutorialCard({ step, targetRect }: TutorialCardProps) {
           ...cardPos,
           zIndex: 102,
           width: 300,
-          background: "rgba(8,14,11,0.97)",
-          border: "1px solid #1e3d2a",
-          borderRadius: 14,
-          backdropFilter: "blur(12px)",
-          boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.08)",
+          background: "var(--ink)",
+          border: "3px solid var(--paper)",
+          boxShadow: "6px 6px 0 var(--blood)",
           overflow: "hidden",
         }}
-        initial={{ scale: 0.88, opacity: 0, y: 10 }}
+        initial={{ scale: 0.92, opacity: 0, y: 8 }}
         animate={
           waitingForAction
             ? {
-                scale: [1, 1.013, 1],
                 opacity: 1,
                 y: 0,
-                boxShadow: [
-                  "0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.08)",
-                  "0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.25)",
-                  "0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.08)",
-                ],
+                borderColor: ["#ffffff", "#ffffff", "#ff0033", "#ff0033"],
               }
-            : { scale: 1, opacity: 1, y: 0 }
+            : { scale: 1, opacity: 1, y: 0, borderColor: "#ffffff" }
         }
         transition={
           waitingForAction
-            ? { duration: 2, repeat: Infinity, ease: "easeInOut" }
+            ? { duration: 1.1, repeat: Infinity, ease: "linear", times: [0, 0.49, 0.5, 1] }
             : { type: "spring", stiffness: 400, damping: 28 }
         }
       >
         {/* Header bar */}
         <div
           className="flex items-center justify-between px-4 py-2.5"
-          style={{ borderBottom: "1px solid #1e3d2a", background: "rgba(0,212,255,0.04)" }}
+          style={{ borderBottom: "2px solid var(--paper)", background: "var(--ink)" }}
         >
-          <span className="font-mono text-[10px] tracking-widest" style={{ color: "#00d4ff88" }}>
-            CH {chapterIndex + 1}/4 — {chapterDef?.title ?? ""}
+          <span className="font-mono font-bold text-[10px] tracking-widest uppercase" style={{ color: "var(--blood)" }}>
+            CH {chapterIndex + 1}/4 // {chapterDef?.title ?? ""}
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={toggleVoice}
               title={voiceEnabled ? "Mute voice" : "Enable voice"}
-              className="font-mono text-xs px-1.5 py-0.5 rounded transition-colors"
+              className="font-mono text-xs px-1.5 py-0.5 transition-colors"
               style={{
-                color: voiceEnabled ? "#00d4ff" : "#2d4a35",
-                border: `1px solid ${voiceEnabled ? "#00d4ff44" : "#1e3d2a"}`,
-                background: voiceEnabled ? "rgba(0,212,255,0.07)" : "transparent",
+                color: "var(--paper)",
+                border: `2px solid ${voiceEnabled ? "var(--blood)" : "var(--faint)"}`,
+                background: "var(--ink)",
               }}
             >
               {voiceEnabled ? "🔊" : "🔇"}
             </button>
             <button
               onClick={skipAll}
-              className="font-mono text-[10px] px-2 py-0.5 rounded tracking-widest transition-colors"
-              style={{ color: "#4a7a5a", border: "1px solid #1e3d2a" }}
+              className="font-mono font-bold text-[10px] px-2 py-1 tracking-widest uppercase"
+              style={{ color: "var(--muted)", border: "2px solid var(--faint)", background: "var(--ink)" }}
             >
               SKIP ALL ▸
             </button>
@@ -245,7 +238,7 @@ export default function TutorialCard({ step, targetRect }: TutorialCardProps) {
 
         {/* Step title */}
         <div className="px-4 pt-3 pb-0.5">
-          <span className="font-mono font-bold text-sm tracking-wide" style={{ color: "#e8f5ee" }}>
+          <span className="font-mono font-bold text-sm tracking-wide uppercase" style={{ color: "var(--paper)" }}>
             {step.title}
           </span>
         </div>
@@ -254,7 +247,7 @@ export default function TutorialCard({ step, targetRect }: TutorialCardProps) {
         <div className="px-4 py-3">
           <p
             className="font-mono text-xs leading-relaxed whitespace-pre-line"
-            style={{ color: "#8aad96" }}
+            style={{ color: "var(--muted)" }}
           >
             {step.text}
           </p>
@@ -263,32 +256,33 @@ export default function TutorialCard({ step, targetRect }: TutorialCardProps) {
         {/* Footer: nav + progress dots */}
         <div
           className="flex items-center justify-between px-4 py-3"
-          style={{ borderTop: "1px solid #1a2e20" }}
+          style={{ borderTop: "2px solid var(--paper)" }}
         >
           {/* Back button */}
           <button
             onClick={goBack}
             disabled={isFirstStep}
-            className="font-mono text-xs px-3 py-1.5 rounded transition-all duration-150"
+            className="font-mono font-bold text-xs px-3 py-1.5 uppercase tracking-wide"
             style={{
-              color: isFirstStep ? "#1e3d2a" : "#6b8c76",
-              border: `1px solid ${isFirstStep ? "#0f1e16" : "#1e3d2a"}`,
+              color: isFirstStep ? "var(--faint)" : "var(--paper)",
+              border: `2px solid ${isFirstStep ? "var(--hair)" : "var(--faint)"}`,
+              background: "var(--ink)",
               cursor: isFirstStep ? "default" : "pointer",
             }}
           >
             ← BACK
           </button>
 
-          {/* Step progress dots */}
+          {/* Step progress squares */}
           <div className="flex items-center gap-1">
             {Array.from({ length: totalInChapter }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-full transition-all duration-200"
+                className="transition-all duration-150"
                 style={{
-                  width: i === stepIndex ? 8 : 5,
-                  height: i === stepIndex ? 8 : 5,
-                  background: i === stepIndex ? "#00d4ff" : i < stepIndex ? "#1e5c2e" : "#1a2e20",
+                  width: i === stepIndex ? 9 : 6,
+                  height: i === stepIndex ? 9 : 6,
+                  background: i === stepIndex ? "var(--blood)" : i < stepIndex ? "var(--paper)" : "var(--faint)",
                 }}
               />
             ))}
@@ -299,29 +293,25 @@ export default function TutorialCard({ step, targetRect }: TutorialCardProps) {
             {step.skippable && (
               <button
                 onClick={skipChapter}
-                className="font-mono text-[10px] px-2 py-1 rounded transition-colors"
-                style={{ color: "#4a7a5a", border: "1px solid #1e3d2a" }}
+                className="font-mono font-bold text-[10px] px-2 py-1 uppercase tracking-wide"
+                style={{ color: "var(--muted)", border: "2px solid var(--faint)", background: "var(--ink)" }}
               >
                 SKIP CH ▸
               </button>
             )}
-            <motion.button
+            <button
               onClick={advanceStep}
               disabled={!canAdvance}
-              className="font-mono text-xs font-bold px-4 py-1.5 rounded-lg tracking-widest transition-all duration-200"
+              className={`font-mono text-xs font-bold px-4 py-1.5 tracking-widest uppercase${canAdvance ? " brut-armed" : ""}`}
               style={{
-                background: canAdvance
-                  ? "linear-gradient(135deg, #00d4ff18, #00d4ff30)"
-                  : "rgba(255,255,255,0.03)",
-                border: canAdvance ? "1px solid #00d4ff" : "1px solid #1e3d2a",
-                color: canAdvance ? "#00d4ff" : "#2d4a35",
+                background: canAdvance ? "var(--blood)" : "var(--ink)",
+                border: canAdvance ? "2px solid var(--blood)" : "2px solid var(--faint)",
+                color: canAdvance ? "var(--paper)" : "var(--faint)",
                 cursor: canAdvance ? "pointer" : "not-allowed",
               }}
-              animate={canAdvance ? { scale: [1, 1.04, 1] } : { scale: 1 }}
-              transition={canAdvance ? { duration: 1.5, repeat: Infinity } : {}}
             >
               {step.isHandOn && !canAdvance ? "TRY IT" : "NEXT →"}
-            </motion.button>
+            </button>
           </div>
         </div>
       </motion.div>

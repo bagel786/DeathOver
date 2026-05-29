@@ -98,26 +98,26 @@ export default function TutorialHint() {
             bottom: 20,
             left: "50%",
             transform: "translateX(-50%)",
-            maxWidth: 300,
-            background: "rgba(8,14,11,0.95)",
-            border: "1px solid #ffcc0055",
-            borderRadius: 10,
+            maxWidth: 320,
+            background: "var(--ink)",
+            border: "2px solid var(--blood)",
             padding: "10px 12px",
-            boxShadow: "0 4px 20px rgba(255,204,0,0.12)",
+            boxShadow: "4px 4px 0 var(--blood)",
           }}
-          initial={{ opacity: 0, y: 12, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 8, scale: 0.95 }}
-          transition={{ duration: 0.25 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 6 }}
+          transition={{ duration: 0.18, ease: "linear" }}
         >
           <div className="flex items-start justify-between gap-2">
-            <p className="font-mono text-xs leading-relaxed" style={{ color: "#ffcc00" }}>
-              💡 {activeHint.text}
+            <p className="font-mono text-xs leading-relaxed" style={{ color: "var(--paper)" }}>
+              <span style={{ color: "var(--blood)", fontWeight: 700 }}>{"// TIP  "}</span>
+              {activeHint.text}
             </p>
             <button
               onClick={dismiss}
-              className="font-mono text-xs flex-shrink-0 mt-0.5"
-              style={{ color: "#4a7a5a" }}
+              className="font-mono text-xs font-bold flex-shrink-0 mt-0.5"
+              style={{ color: "var(--blood)" }}
             >
               ✕
             </button>

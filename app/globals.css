@@ -1,33 +1,181 @@
 @import "tailwindcss";
 
+/* ============================================================
+   BRUTALIST DESIGN TOKENS
+   Strict palette: pure black, pure white, one accent (blood red).
+   Everything else is white at reduced opacity.
+   ============================================================ */
 :root {
-  --field-green: #1a3a2a;
-  --field-green-light: #1e4a32;
-  --boundary-ring: #2d6a45;
-  --pitch-color: #c8a96e;
-  --accent-cyan: #00d4ff;
-  --accent-red: #ff4444;
-  --accent-yellow: #ffcc00;
-  --bg-dark: #0a0f0d;
-  --bg-card: #111a14;
-  --bg-card-hover: #162019;
-  --text-primary: #e8f5ee;
-  --text-muted: #6b8c76;
+  --ink: #000000;          /* page background, inverted text */
+  --paper: #ffffff;        /* primary text, borders, default fills */
+  --blood: #ff0033;        /* THE accent — active, boundaries, danger, CTAs */
+
+  --muted: rgba(255, 255, 255, 0.55);  /* secondary metrics */
+  --faint: rgba(255, 255, 255, 0.30);  /* dividers, disabled, ghost grid */
+  --hair:  rgba(255, 255, 255, 0.14);  /* faintest structural lines */
+
+  --blood-dim: rgba(255, 0, 51, 0.55);
+  --blood-wash: rgba(255, 0, 51, 0.12);
+
+  --mono: var(--font-mono), ui-monospace, 'SF Mono', 'Fira Code', 'Ubuntu Mono', monospace;
 }
 
 * {
   box-sizing: border-box;
 }
 
-body {
-  background-color: var(--bg-dark);
-  color: var(--text-primary);
-  font-family: var(--font-geist-sans), 'Inter', system-ui, sans-serif;
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
+html {
+  background-color: var(--ink);
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-dark); }
-::-webkit-scrollbar-thumb { background: var(--boundary-ring); border-radius: 3px; }
+body {
+  background-color: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Kill rounding everywhere as a brutalist safety net. */
+button,
+input,
+select,
+textarea {
+  border-radius: 0;
+  font-family: var(--mono);
+}
+
+/* ============================================================
+   SQUARE SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--ink); border-left: 1px solid var(--hair); }
+::-webkit-scrollbar-thumb { background: var(--paper); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: var(--blood); }
+
+/* ============================================================
+   BRUTALIST UTILITY CLASSES
+   ============================================================ */
+
+/* Panels — square, thick white border, flat ink fill, no blur/shadow. */
+.brut-panel {
+  background: var(--ink);
+  border: 2px solid var(--paper);
+  border-radius: 0;
+}
+.brut-panel--faint {
+  border-color: var(--faint);
+}
+
+/* Heavy structural dividers. */
+.brut-rule {
+  border: 0;
+  border-top: 2px solid var(--paper);
+  margin: 0;
+}
+.brut-rule--faint { border-top-color: var(--faint); }
+.brut-rule--dashed {
+  border-top: 2px dashed var(--faint);
+}
+
+/* Tiny tight uppercase labels. */
+.brut-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Oversized blocky data readouts. */
+.brut-data-xl {
+  font-family: var(--mono);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------
+   MECHANICAL BUTTONS — solid blocks that "sink" on press and
+   invert on hover. No glow. Hard offset shadow only.
+   ------------------------------------------------------------ */
+.brut-btn {
+  position: relative;
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--ink);
+  color: var(--paper);
+  border: 2px solid var(--paper);
+  border-radius: 0;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--paper);
+  transition: transform 80ms steps(2), box-shadow 80ms steps(2),
+              background-color 80ms steps(2), color 80ms steps(2);
+}
+.brut-btn:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+.brut-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--paper);
+}
+
+/* Primary trigger — red block. */
+.brut-btn--primary {
+  background: var(--blood);
+  color: var(--paper);
+  border-color: var(--blood);
+  box-shadow: 4px 4px 0 var(--paper);
+}
+.brut-btn--primary:hover {
+  background: var(--paper);
+  color: var(--blood);
+  border-color: var(--paper);
+}
+.brut-btn--primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--paper);
+}
+
+/* Active/selected state — full inversion (white block, black text). */
+.brut-btn--active {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--paper);
+}
+
+.brut-btn:disabled,
+.brut-btn[aria-disabled="true"] {
+  background: var(--ink);
+  color: var(--faint);
+  border-color: var(--faint);
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================================
+   HARD (NON-GLOW) MOTION — replaces neon pulses.
+   ============================================================ */
+@keyframes brut-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+.brut-blink {
+  animation: brut-blink 1s steps(1, end) infinite;
+}
+
+@keyframes brut-blood-flip {
+  0%, 100% { background: var(--blood); border-color: var(--blood); }
+  50%      { background: var(--ink);   border-color: var(--paper); }
+}
+.brut-armed {
+  animation: brut-blood-flip 1.1s steps(1, end) infinite;
+}

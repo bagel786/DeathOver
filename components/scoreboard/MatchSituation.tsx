@@ -1,6 +1,7 @@
 "use client";
 
 import { useGameStore } from "@/store/gameStore";
+import { getOutcomeCell, EMPTY_CELL } from "@/lib/outcomeStyle";
 
 export default function MatchSituation() {
   const match = useGameStore((s) => s.match);
@@ -13,90 +14,91 @@ export default function MatchSituation() {
   const rro = ballsLeft > 0 ? (runsNeeded / ballsLeft) * 6 : 0;
   const isHigh = rro > 10;
   const isMed = rro > 7;
-  const wktColor = wktsLeft <= 1 ? "#ff4444" : wktsLeft <= 3 ? "#ffcc00" : "#4fc3f7";
 
-  const rrColor = isHigh ? "#ff4444" : isMed ? "#ffcc00" : "#00d4ff";
+  // Pressure / danger only ever expressed in red vs white — no rainbow.
+  const danger = isHigh || wktsLeft <= 1;
 
   return (
     <div
       data-tutorial="match-situation"
-      className="p-4 rounded-xl flex flex-col gap-3"
-      style={{
-        background: "rgba(10,15,13,0.9)",
-        border: "1px solid #1e3d2a",
-        backdropFilter: "blur(8px)",
-        minWidth: 220,
-      }}
+      className="flex flex-col"
+      style={{ background: "var(--ink)", border: "2px solid var(--paper)", minWidth: 220 }}
     >
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <span className="text-xs font-mono tracking-widest" style={{ color: "#6b8c76" }}>
-          MATCH SITUATION
-        </span>
-        <span className="text-xs font-mono" style={{ color: "#4a7a5a" }}>
-          FINAL OVER
-        </span>
+      {/* Header bar */}
+      <div
+        className="flex justify-between items-center px-3 py-2"
+        style={{ borderBottom: "2px solid var(--paper)" }}
+      >
+        <span className="brut-label">MATCH // SITUATION</span>
+        <span className="brut-label" style={{ color: "var(--blood)" }}>FINAL OVER</span>
       </div>
 
-      {/* Main score display: RUNS off BALLS */}
-      <div className="flex items-baseline gap-2">
-        <span
-          className="font-mono font-bold leading-none"
-          style={{ fontSize: "clamp(28px, 5vw, 42px)", color: "#e8f5ee" }}
-        >
-          {runsNeeded}
-        </span>
-        <span className="font-mono text-base" style={{ color: "#6b8c76" }}>RNS</span>
-        <span className="font-mono ml-1" style={{ color: "#4a7a5a", fontSize: 13 }}>OFF</span>
-        <span
-          className="font-mono font-bold"
-          style={{ fontSize: "clamp(20px, 4vw, 30px)", color: rrColor }}
-        >
-          {ballsLeft}
-        </span>
-        <span className="font-mono text-sm" style={{ color: rrColor }}>BLS</span>
-      </div>
-
-      {/* Wickets remaining — own line */}
-      <div className="flex items-baseline gap-2">
-        <span
-          className="font-mono font-bold"
-          style={{ fontSize: "clamp(18px, 3.5vw, 26px)", color: wktColor }}
-        >
-          {wktsLeft}
-        </span>
-        <span className="font-mono text-sm" style={{ color: wktColor }}>WKT{wktsLeft !== 1 ? "S" : ""}</span>
-      </div>
-
-      {/* Required run rate + fallen wickets */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-mono" style={{ color: "#4a7a5a" }}>RRR</span>
-        <span className="text-sm font-mono font-bold" style={{ color: rrColor }}>
-          {rro > 0 ? rro.toFixed(1) : "—"}
-        </span>
-        <span
-          className="text-xs font-mono px-1 rounded"
-          style={{ background: rrColor + "22", border: `1px solid ${rrColor}44`, color: rrColor }}
-        >
-          {isHigh ? "HIGH" : isMed ? "MED" : "LOW"}
-        </span>
-        <span className="text-xs font-mono" style={{ color: "#4a7a5a" }}>per over</span>
-        {match.wicketsTaken > 0 && (
-          <span className="ml-auto text-xs font-mono" style={{ color: "#ff444488" }}>
-            {match.wicketsTaken} fallen
+      <div className="flex flex-col gap-3 p-3">
+        {/* Main readout: RUNS off BALLS */}
+        <div className="flex items-baseline gap-2">
+          <span className="brut-data-xl" style={{ fontSize: "clamp(34px, 6vw, 52px)", color: "var(--paper)" }}>
+            {String(runsNeeded).padStart(2, "0")}
           </span>
-        )}
+          <span className="brut-label" style={{ alignSelf: "flex-end", marginBottom: 4 }}>RNS</span>
+          <span className="brut-label" style={{ alignSelf: "flex-end", marginBottom: 4, color: "var(--faint)" }}>OFF</span>
+          <span
+            className="brut-data-xl"
+            style={{ fontSize: "clamp(24px, 4.5vw, 36px)", color: danger ? "var(--blood)" : "var(--paper)" }}
+          >
+            {ballsLeft}
+          </span>
+          <span className="brut-label" style={{ alignSelf: "flex-end", marginBottom: 4 }}>BLS</span>
+        </div>
+
+        {/* Wickets remaining */}
+        <div className="flex items-baseline gap-2">
+          <span
+            className="brut-data-xl"
+            style={{ fontSize: "clamp(18px, 3.5vw, 26px)", color: wktsLeft <= 1 ? "var(--blood)" : "var(--paper)" }}
+          >
+            {wktsLeft}
+          </span>
+          <span className="brut-label">WKT{wktsLeft !== 1 ? "S" : ""} IN HAND</span>
+          {match.wicketsTaken > 0 && (
+            <span className="brut-label ml-auto" style={{ color: "var(--blood)" }}>
+              {match.wicketsTaken} TAKEN
+            </span>
+          )}
+        </div>
+
+        <hr className="brut-rule brut-rule--dashed" />
+
+        {/* Required run rate */}
+        <div className="flex items-center gap-2">
+          <span className="brut-label">RRR</span>
+          <span
+            className="font-mono font-bold text-sm"
+            style={{ color: danger ? "var(--blood)" : "var(--paper)", fontVariantNumeric: "tabular-nums" }}
+          >
+            {rro > 0 ? rro.toFixed(1) : "—"}
+          </span>
+          <span
+            className="text-[10px] font-mono font-bold px-1.5 py-0.5 uppercase tracking-widest"
+            style={{
+              background: danger ? "var(--blood)" : "var(--ink)",
+              border: `2px solid ${danger ? "var(--blood)" : "var(--paper)"}`,
+              color: danger ? "var(--paper)" : "var(--paper)",
+            }}
+          >
+            {isHigh ? "HIGH" : isMed ? "MED" : "LOW"}
+          </span>
+          <span className="brut-label" style={{ color: "var(--faint)" }}>PER OVER</span>
+        </div>
+
+        {/* Ball log */}
+        <BallDots />
+
+        <hr className="brut-rule" />
+
+        {/* Batsmen */}
+        <BatsmanLine name={batsman.name} runs={batsman.runsScored} balls={batsman.ballsFaced} isStriker />
+        <BatsmanLine name={nonStriker.name} runs={nonStriker.runsScored} balls={nonStriker.ballsFaced} />
       </div>
-
-      {/* Ball dots */}
-      <BallDots />
-
-      {/* Divider */}
-      <div style={{ borderTop: "1px solid #1e3d2a" }} />
-
-      {/* Batsmen */}
-      <BatsmanLine name={batsman.name} runs={batsman.runsScored} balls={batsman.ballsFaced} isStriker />
-      <BatsmanLine name={nonStriker.name} runs={nonStriker.runsScored} balls={nonStriker.ballsFaced} />
     </div>
   );
 }
@@ -106,74 +108,28 @@ function BallDots() {
   const totalBalls = useGameStore((s) => s.match.totalBalls);
   const ballsBowled = useGameStore((s) => s.match.ballsBowled);
 
-  // Total slots = all balls already in log + empty slots for remaining regular deliveries
   const emptySlots = totalBalls - ballsBowled;
   const totalSlots = ballLog.length + emptySlots;
 
   return (
-    <div className="flex gap-1 flex-wrap" data-tutorial="ball-dots">
-      {Array.from({ length: totalSlots }).map((_, i) => {
-        const ball = ballLog[i];
-        if (!ball) {
+    <div className="flex flex-col gap-1" data-tutorial="ball-dots">
+      <span className="brut-label" style={{ color: "var(--faint)" }}>OVER LOG</span>
+      <div className="flex gap-1 flex-wrap">
+        {Array.from({ length: totalSlots }).map((_, i) => {
+          const ball = ballLog[i];
+          const cell = ball ? getOutcomeCell(ball) : EMPTY_CELL;
+          const isExtra = !!ball && (ball.chaosEvent === "wide" || ball.chaosEvent === "no_ball");
           return (
             <div
               key={i}
-              className="w-6 h-6 rounded-full flex items-center justify-center"
-              style={{ background: "#1a2e20", border: "1px solid #2d4a35" }}
-            />
-          );
-        }
-
-        // Extra deliveries: no-ball or wide get special treatment
-        if (ball.chaosEvent === "no_ball") {
-          const color = "#ff6b35";
-          return (
-            <div
-              key={i}
-              className="px-1 h-6 rounded-full flex items-center justify-center text-[9px] font-bold font-mono"
-              style={{ background: color + "33", border: `1px solid ${color}`, color }}
+              className={`h-6 flex items-center justify-center text-[11px] font-bold font-mono ${isExtra ? "px-1" : "w-6"}`}
+              style={{ background: cell.fill, border: `2px solid ${cell.border}`, color: cell.text }}
             >
-              NB{ball.runsScored}
+              {cell.label}
             </div>
           );
-        }
-
-        if (ball.chaosEvent === "wide") {
-          const color = "#00bcd4";
-          return (
-            <div
-              key={i}
-              className="px-1 h-6 rounded-full flex items-center justify-center text-[9px] font-bold font-mono"
-              style={{ background: color + "33", border: `1px solid ${color}`, color }}
-            >
-              Wd{ball.runsScored}
-            </div>
-          );
-        }
-
-        const color =
-          ball.isWicket ? "#ff4444"
-          : ball.runsScored >= 6 ? "#9c27b0"
-          : ball.runsScored >= 4 ? "#ff9800"
-          : ball.runsScored > 0 ? "#ffcc00"
-          : "#2d6a45";
-        const label =
-          ball.isWicket ? "W"
-          : ball.runsScored >= 6 ? "6"
-          : ball.runsScored >= 4 ? "4"
-          : ball.runsScored === 0 ? "•"
-          : String(ball.runsScored);
-
-        return (
-          <div
-            key={i}
-            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold font-mono"
-            style={{ background: color + "33", border: `1px solid ${color}`, color }}
-          >
-            {label}
-          </div>
-        );
-      })}
+        })}
+      </div>
     </div>
   );
 }
@@ -192,17 +148,23 @@ function BatsmanLine({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-1.5">
-        {isStriker && (
-          <span className="text-xs" style={{ color: "#00d4ff" }}>▶</span>
-        )}
         <span
-          className="text-sm font-mono font-semibold"
-          style={{ color: isStriker ? "#e8f5ee" : "#6b8c76" }}
+          className="text-xs font-mono font-bold"
+          style={{ color: isStriker ? "var(--blood)" : "transparent" }}
+        >
+          {">"}
+        </span>
+        <span
+          className="text-sm font-mono font-bold uppercase tracking-wide"
+          style={{ color: isStriker ? "var(--paper)" : "var(--muted)" }}
         >
           {name}
         </span>
       </div>
-      <span className="text-xs font-mono" style={{ color: "#6b8c76" }}>
+      <span
+        className="text-xs font-mono"
+        style={{ color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}
+      >
         {runs} ({balls})
       </span>
     </div>

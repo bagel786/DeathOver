@@ -68,26 +68,26 @@ export default function PlayPage() {
   return (
     <main
       className="min-h-screen w-full flex flex-col"
-      style={{ background: "#0a0f0d" }}
+      style={{ background: "var(--ink)" }}
     >
       {/* Top bar */}
       <header
         className="flex items-center justify-between px-6 py-3"
-        style={{ borderBottom: "1px solid #1a2e20" }}
+        style={{ borderBottom: "2px solid var(--paper)" }}
       >
         <button
-          className="font-mono font-bold tracking-widest text-sm transition-opacity hover:opacity-70"
-          style={{ color: "#00d4ff", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          className="font-mono font-bold tracking-widest text-sm uppercase transition-colors"
+          style={{ color: "var(--blood)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
           onClick={() => router.push("/")}
         >
-          DEATH OVER
+          ◄ DEATH OVER
         </button>
-        <span className="hidden sm:block font-mono text-xs" style={{ color: "#4a7a5a" }}>
+        <span className="hidden sm:block brut-label">
           CHALLENGE MODE
         </span>
         <button
-          className="font-mono text-xs px-3 py-1 rounded"
-          style={{ border: "1px solid #1e3d2a", color: "#6b8c76" }}
+          className="font-mono font-bold text-xs px-3 py-1.5 uppercase tracking-widest"
+          style={{ border: "2px solid var(--paper)", color: "var(--paper)", background: "var(--ink)", cursor: "pointer" }}
           onClick={() => useGameStore.getState().resetGame()}
         >
           RESET
@@ -95,22 +95,23 @@ export default function PlayPage() {
       </header>
 
       {/* Mobile tab bar — hidden on lg+ */}
-      <div className="lg:hidden flex" style={{ borderBottom: "1px solid #1a2e20" }}>
+      <div className="lg:hidden flex" style={{ borderBottom: "2px solid var(--paper)" }}>
         <button
-          className="flex-1 py-2 font-mono text-xs tracking-widest transition-colors"
+          className="flex-1 py-2 font-mono font-bold text-xs tracking-widest uppercase transition-colors"
           style={{
-            color: mobileTab === 'delivery' ? '#00d4ff' : '#4a7a5a',
-            borderBottom: mobileTab === 'delivery' ? '2px solid #00d4ff' : '2px solid transparent',
+            color: mobileTab === 'delivery' ? 'var(--paper)' : 'var(--muted)',
+            background: mobileTab === 'delivery' ? 'var(--blood)' : 'var(--ink)',
+            borderRight: '2px solid var(--paper)',
           }}
           onClick={() => setMobileTab('delivery')}
         >
           BOWL
         </button>
         <button
-          className="flex-1 py-2 font-mono text-xs tracking-widest transition-colors"
+          className="flex-1 py-2 font-mono font-bold text-xs tracking-widest uppercase transition-colors"
           style={{
-            color: mobileTab === 'scoreboard' ? '#00d4ff' : '#4a7a5a',
-            borderBottom: mobileTab === 'scoreboard' ? '2px solid #00d4ff' : '2px solid transparent',
+            color: mobileTab === 'scoreboard' ? 'var(--paper)' : 'var(--muted)',
+            background: mobileTab === 'scoreboard' ? 'var(--blood)' : 'var(--ink)',
           }}
           onClick={() => setMobileTab('scoreboard')}
         >
@@ -151,17 +152,17 @@ export default function PlayPage() {
 
           {/* Quick tip — desktop only */}
           <div
-            className="hidden lg:block p-3 rounded-lg text-xs font-mono"
+            className="hidden lg:block p-3 text-xs font-mono"
             style={{
-              background: "rgba(0,212,255,0.04)",
-              border: "1px solid #00d4ff22",
-              color: "#4a7a5a",
+              background: "var(--ink)",
+              border: "2px solid var(--faint)",
+              color: "var(--muted)",
               lineHeight: 1.6,
             }}
           >
-            <p className="mb-1" style={{ color: "#00d4ff88" }}>TIP</p>
-            Drag the <span style={{ color: "#4fc3f7" }}>blue dots</span> to place your 9 fielders.
-            The AI reads your field — try to bluff it!
+            <p className="brut-label mb-1" style={{ color: "var(--blood)" }}>// TIP</p>
+            Drag the <span style={{ color: "var(--paper)" }}>numbered squares</span> to place your 9
+            fielders. The AI reads your field — try to bluff it.
           </div>
         </motion.div>
 
@@ -190,24 +191,24 @@ export default function PlayPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center"
-            style={{ background: "rgba(156,39,176,0.08)" }}
+            style={{ background: "var(--blood-wash)" }}
           >
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.1, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="font-mono font-black tracking-widest text-center px-8 py-4 rounded-2xl"
+              exit={{ scale: 1.05, opacity: 0 }}
+              transition={{ duration: 0.12, ease: "linear" }}
+              className="font-mono font-black tracking-widest text-center px-8 py-4 uppercase"
               style={{
-                background: "rgba(0,0,0,0.85)",
-                border: "1px solid #9c27b0",
-                color: "#ce93d8",
+                background: "var(--ink)",
+                border: "3px solid var(--blood)",
+                color: "var(--blood)",
                 fontSize: "clamp(16px, 3vw, 24px)",
-                boxShadow: "0 0 40px rgba(156,39,176,0.4)",
+                boxShadow: "8px 8px 0 var(--blood)",
               }}
             >
-              ⚡ CHAOS EVENT
-              <div className="text-sm mt-1" style={{ color: "#9c27b0" }}>
+              ! CHAOS EVENT
+              <div className="text-sm mt-1" style={{ color: "var(--paper)" }}>
                 {chaosFlash.replace(/_/g, " ").toUpperCase()}
               </div>
             </motion.div>
