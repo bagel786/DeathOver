@@ -5,6 +5,7 @@ A tactical cricket browser game where you bowl the final over and try to outsmar
 You set your field, pick your delivery, and watch the simulation play out. The AI reads your field placement to guess what you're about to bowl — so the real game is deception. Fool it with an unexpected delivery and the odds shift in your favour. Get read and it'll put you away.
 
 > **[Play the daily challenge →](https://death-over.up.railway.app)
+> **{also available here -> ] (http://www.deathover.xyz/)
 
 ---
 
