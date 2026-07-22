@@ -3,23 +3,27 @@
 import React from "react";
 import { useGameStore } from "@/store/gameStore";
 import type { DeliveryLength, DeliveryVariation, DeliveryLine } from "@/types/game";
+import { getBowler } from "@/engine/bowlers";
 
-const DELIVERY_LENGTHS: { value: DeliveryLength; label: string; hint: string }[] = [
-  { value: "yorker",      label: "Yorker",      hint: "Full, aimed at the feet" },
-  { value: "full",        label: "Full",         hint: "Driveable, full length" },
-  { value: "good_length", label: "Good Length",  hint: "Stock delivery" },
-  { value: "short",       label: "Short",        hint: "Back of a length, forces the pull" },
-  { value: "bouncer",     label: "Bouncer",      hint: "Very short, chin music" },
-];
+/** The five length slots, in order. Names and hints come from the bowler. */
+const LENGTH_ORDER: DeliveryLength[] = ["yorker", "full", "good_length", "short", "bouncer"];
 
-const DELIVERY_VARIATIONS: { value: DeliveryVariation; label: string; hint: string }[] = [
-  { value: "pace",        label: "Pace",         hint: "Standard — no variation" },
-  { value: "slower_ball", label: "Slower Ball",  hint: "Big pace drop, hard to time" },
-  { value: "off_cutter",  label: "Off Cutter",   hint: "Moves into right-hander off pitch" },
-  { value: "leg_cutter",  label: "Leg Cutter",   hint: "Moves away from right-hander" },
-  { value: "outswing",    label: "Outswing",     hint: "Swings away in the air" },
-  { value: "inswing",     label: "Inswing",      hint: "Swings in through the air" },
-];
+/** Button text per variation. Which of these appear comes from the bowler. */
+const VARIATION_LABELS: Record<DeliveryVariation, string> = {
+  pace:        "Pace",
+  slower_ball: "Slower Ball",
+  off_cutter:  "Off Cutter",
+  leg_cutter:  "Leg Cutter",
+  outswing:    "Outswing",
+  inswing:     "Inswing",
+
+  off_break:   "Off Break",
+  leg_break:   "Leg Break",
+  googly:      "Googly",
+  arm_ball:    "Arm Ball",
+  top_spinner: "Top Spinner",
+  slider:      "Slider",
+};
 
 const DELIVERY_LINES: { value: DeliveryLine; label: string }[] = [
   { value: "wide_outside_off", label: "Wide Outside Off" },
@@ -85,21 +89,27 @@ export default function DeliverySelector() {
   const setDeliveryVariation = useGameStore((s) => s.setDeliveryVariation);
   const setDeliveryLine      = useGameStore((s) => s.setDeliveryLine);
   const isComplete = useGameStore((s) => s.match.isComplete);
+  const bowler = getBowler(useGameStore((s) => s.bowlerId));
 
   return (
     <div className="flex flex-col gap-3" data-tutorial="delivery-selector">
       {/* LENGTH */}
       <div className="flex flex-col p-3 gap-2" style={SECTION_STYLE} data-tutorial="delivery-length">
-        <p style={LABEL_STYLE}>LENGTH</p>
+        <div className="flex items-baseline justify-between">
+          <p style={LABEL_STYLE}>LENGTH</p>
+          <p style={{ ...LABEL_STYLE, color: "var(--blood)", marginBottom: "0.4rem" }}>
+            {bowler.name}
+          </p>
+        </div>
         <div className="grid grid-cols-2 gap-1.5">
-          {DELIVERY_LENGTHS.map(({ value, label, hint }) => (
+          {LENGTH_ORDER.map((value) => (
             <SelectButton
               key={value}
               active={selectedLength === value}
               disabled={isComplete}
               onClick={() => setDeliveryLength(value)}
-              label={label}
-              hint={hint}
+              label={bowler.lengthLabels[value]}
+              hint={bowler.lengthHints[value]}
             />
           ))}
         </div>
@@ -109,14 +119,14 @@ export default function DeliverySelector() {
       <div className="flex flex-col p-3 gap-2" style={SECTION_STYLE} data-tutorial="delivery-variation">
         <p style={LABEL_STYLE}>VARIATION</p>
         <div className="grid grid-cols-2 gap-1.5">
-          {DELIVERY_VARIATIONS.map(({ value, label, hint }) => (
+          {bowler.variations.map((value) => (
             <SelectButton
               key={value}
               active={selectedVariation === value}
               disabled={isComplete}
               onClick={() => setDeliveryVariation(value)}
-              label={label}
-              hint={hint}
+              label={VARIATION_LABELS[value]}
+              hint={bowler.variationHints[value]}
             />
           ))}
         </div>

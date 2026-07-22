@@ -26,15 +26,3 @@ export function createGameRng(baseSeed: number, callCount: number) {
   const rng = mulberry32(ballSeed);
   return rng;
 }
-
-/**
- * Unseeded RNG for non-deterministic contexts (custom games, UI effects).
- */
-export const randomFloat = (): number => Math.random();
-
-/**
- * Pick a random item from an array.
- */
-export function randomChoice<T>(arr: T[], rng: () => number = Math.random): T {
-  return arr[Math.floor(rng() * arr.length)];
-}

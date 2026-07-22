@@ -211,6 +211,31 @@ export function recomputeFielderMeta(fielders: Fielder[]): Fielder[] {
   }));
 }
 
+// ============================================================
+// Handedness
+//
+// Every angle table in the engine is written from a right-hander's point of
+// view (off = 270°, leg = 90°). A left-hander is the same batsman with the
+// ground flipped, so instead of a second set of tables we mirror the field on
+// the way into the simulation and mirror the resulting shot angle on the way
+// out. One transform in, one out — nothing in between can drift.
+// ============================================================
+
+/** Reflect a polar angle across the straight line (0°/180°). */
+export function mirrorAngle(angle: number): number {
+  return (360 - angle) % 360;
+}
+
+/** Reflect fielders across the pitch, recomputing their zone and label. */
+export function mirrorFielders(fielders: Fielder[]): Fielder[] {
+  return recomputeFielderMeta(
+    fielders.map((f) => ({
+      ...f,
+      position: { x: 100 - f.position.x, y: f.position.y },
+    }))
+  );
+}
+
 export function angleToDirectionLabel(angle: number): string {
   if (angle < 22.5 || angle >= 337.5) return "straight down the ground";
   if (angle < 67.5)  return "through mid-wicket";

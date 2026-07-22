@@ -96,8 +96,8 @@ export default function MatchSituation() {
         <hr className="brut-rule" />
 
         {/* Batsmen */}
-        <BatsmanLine name={batsman.name} runs={batsman.runsScored} balls={batsman.ballsFaced} isStriker />
-        <BatsmanLine name={nonStriker.name} runs={nonStriker.runsScored} balls={nonStriker.ballsFaced} />
+        <BatsmanLine name={batsman.name} hand={batsman.hand} runs={batsman.runsScored} balls={batsman.ballsFaced} isStriker />
+        <BatsmanLine name={nonStriker.name} hand={nonStriker.hand} runs={nonStriker.runsScored} balls={nonStriker.ballsFaced} />
       </div>
     </div>
   );
@@ -136,11 +136,13 @@ function BallDots() {
 
 function BatsmanLine({
   name,
+  hand,
   runs,
   balls,
   isStriker = false,
 }: {
   name: string;
+  hand: import("@/types/game").BattingHand;
   runs: number;
   balls: number;
   isStriker?: boolean;
@@ -159,6 +161,16 @@ function BatsmanLine({
           style={{ color: isStriker ? "var(--paper)" : "var(--muted)" }}
         >
           {name}
+        </span>
+        <span
+          className="text-[0.55rem] font-mono font-bold px-1 py-0.5 leading-none"
+          style={{
+            color: hand === "left" ? "var(--blood)" : "var(--muted)",
+            border: `1px solid ${hand === "left" ? "var(--blood)" : "var(--faint)"}`,
+          }}
+          title={hand === "left" ? "Left-handed batsman" : "Right-handed batsman"}
+        >
+          {hand === "left" ? "LHB" : "RHB"}
         </span>
       </div>
       <span

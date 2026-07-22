@@ -2,13 +2,13 @@ import type {
   DeliveryLength,
   DeliveryVariation,
   DeliveryLine,
-  BallResult,
   ChaosEvent,
-  BatsmanProfile,
   AIExpectation,
   Fielder,
 } from "@/types/game";
 import { angleToDirectionLabel, cartesianToPolar } from "@/engine/fieldMapping";
+import { classifyDismissal } from "@/engine/dismissal";
+import type { BowlerType } from "@/engine/bowlers";
 
 interface FeedbackParams {
   deliveryLength: DeliveryLength;
@@ -17,24 +17,38 @@ interface FeedbackParams {
   aiExpectation: AIExpectation;
   wasLengthBluff: boolean;
   wasVariationBluff: boolean;
-  result: BallResult;
   runsScored: number;
   isWicket: boolean;
   coverage: number; // 0-1
   shotAngle: number;
   chaosEvent: ChaosEvent;
-  batsman: BatsmanProfile;
   fielders: Fielder[];
   /** How the ball made contact — drives shot description in the feedback narrative */
   contactType: string;
+  /** Pace or spin — decides what the lengths and shots are called */
+  bowlerType: BowlerType;
 }
 
-const LENGTH_NAMES: Record<DeliveryLength, string> = {
-  yorker:     "yorker",
-  full:       "full delivery",
-  good_length: "good-length delivery",
-  short:      "short-pitched ball",
-  bouncer:    "bouncer",
+/**
+ * The five length slots are shared by pace and spin, but they're called
+ * different things and describing a spinner's long hop as a "bouncer" reads as
+ * a bug to anyone who watches cricket.
+ */
+const LENGTH_NAMES: Record<BowlerType, Record<DeliveryLength, string>> = {
+  pace: {
+    yorker:      "yorker",
+    full:        "full delivery",
+    good_length: "good-length delivery",
+    short:       "short-pitched ball",
+    bouncer:     "bouncer",
+  },
+  spin: {
+    yorker:      "tossed-up delivery",
+    full:        "full delivery",
+    good_length: "good-length delivery",
+    short:       "delivery dropped short",
+    bouncer:     "long hop",
+  },
 };
 
 const VARIATION_NAMES: Record<DeliveryVariation, string> = {
@@ -44,6 +58,13 @@ const VARIATION_NAMES: Record<DeliveryVariation, string> = {
   leg_cutter:  "leg cutter",
   outswing:    "outswinger",
   inswing:     "inswinger",
+
+  off_break:   "off break",
+  leg_break:   "leg break",
+  googly:      "googly",
+  arm_ball:    "arm ball",
+  top_spinner: "top spinner",
+  slider:      "slider",
 };
 
 const LINE_NAMES: Record<DeliveryLine, string> = {
@@ -66,8 +87,8 @@ const CHAOS_MESSAGES: Record<NonNullable<ChaosEvent>, string> = {
 
 
 /** Combine length + variation into a natural description, e.g. "yorker slower ball" */
-function describeDelivery(length: DeliveryLength, variation: DeliveryVariation): string {
-  const lenName = LENGTH_NAMES[length];
+function describeDelivery(length: DeliveryLength, variation: DeliveryVariation, bowlerType: BowlerType): string {
+  const lenName = LENGTH_NAMES[bowlerType][length];
   const varName = VARIATION_NAMES[variation];
   return varName ? `${lenName} ${varName}` : lenName;
 }
@@ -79,9 +100,21 @@ function areSimilarLengths(a: DeliveryLength, b: DeliveryLength): boolean {
 }
 
 /** Shot verb derived from delivery type and direction — fallback for clean contact */
-function shotVerbFromDelivery(length: DeliveryLength, line: DeliveryLine, angle?: number): string {
+function shotVerbFromDelivery(length: DeliveryLength, line: DeliveryLine, bowlerType: BowlerType, angle?: number): string {
   const isLeg = line === "leg" || line === "wide_outside_leg";
   const isOff = line === "off" || line === "wide_outside_off";
+
+  // Spin has its own shot vocabulary: you sweep a spinner, you don't hook one,
+  // and the off-side shot off a short ball is a cut, never an upper cut.
+  if (bowlerType === "spin" && angle !== undefined) {
+    const isShortish = length === "bouncer" || length === "short" || length === "yorker";
+    if (isShortish) {
+      const isSweepZone = angle >= 22.5 && angle < 157.5;
+      if (isSweepZone) return length === "bouncer" ? "slog swept" : "swept";
+      const isOffSideZone = angle >= 202.5 && angle < 315;
+      if (isOffSideZone) return "cut";
+    }
+  }
 
   if (angle !== undefined) {
     // Ball went to the fine/keeper zone — always a glance regardless of delivery or line
@@ -150,8 +183,43 @@ function zoneTacticalTip(angle: number, deep: boolean): string {
   return `Tip: Cover drive region was open — a ${d}cover or extra cover would have saved that.`;
 }
 
+/** How the ball was struck on a wicket caught in the field — flavour only, no fielder named */
+function caughtShotDescription(length: DeliveryLength, line: DeliveryLine, bowlerType: BowlerType): string {
+  const offSide = line === "wide_outside_off" || line === "off";
+  if (bowlerType === "spin") {
+    switch (length) {
+      case "yorker":  return "Lured down the pitch by the flight — got under it and skied it";
+      case "bouncer": return offSide
+        ? "A long hop outside off — carved it straight up in the air"
+        : "A long hop begging to be hit — dragged the slog sweep off the top edge";
+      case "short":   return offSide
+        ? "Dropped short outside off — cut it in the air"
+        : "Rocked back to pull the short one and got it high on the bat";
+      case "good_length": return "Good length turning away — thick outside edge off the drive";
+      default: // full
+        return line === "off"    ? "Went for the drive against the turn — leading edge"
+          : line === "middle"    ? "Drove it uppishly against the spin"
+          : "Swept it straight up off the top edge";
+    }
+  }
+  switch (length) {
+    case "yorker":  return "Jammed onto the outside edge trying to dig it out";
+    case "bouncer": return offSide
+      ? "The bouncer climbed sharply outside off — fended it off the glove"
+      : "The bouncer got the top edge — straight up in the air";
+    case "short":   return offSide
+      ? "The short ball climbed outside off — cut it straight up"
+      : "Mistimed the pull shot";
+    case "good_length": return "Good length outside off, nipped away — thick outside edge";
+    default: // full
+      return line === "off"    ? "Tried to drive through cover — thick outside edge"
+        : line === "middle"    ? "Full and straight — drove it uppishly"
+        : "Miscued the flick to leg";
+  }
+}
+
 /** Shot verb that reflects HOW the ball was actually struck */
-function shotVerb(contactType: string, length: DeliveryLength, line: DeliveryLine, angle?: number): string {
+function shotVerb(contactType: string, length: DeliveryLength, line: DeliveryLine, bowlerType: BowlerType, angle?: number): string {
   switch (contactType) {
     case "edged_off":   return "edged";
     case "edged_leg":   return "inside edged";
@@ -159,8 +227,10 @@ function shotVerb(contactType: string, length: DeliveryLength, line: DeliveryLin
     case "scoop":       return "scooped";
     case "pull":        return "pulled";
     case "upper_cut":   return "upper cut";
+    case "slog_sweep":  return "slog swept";
+    case "cut":         return "cut";
     case "lofted_slog": return "heaved";
-    default:            return shotVerbFromDelivery(length, line, angle);
+    default:            return shotVerbFromDelivery(length, line, bowlerType, angle);
   }
 }
 
@@ -178,27 +248,30 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
     shotAngle,
     chaosEvent,
     contactType,
+    bowlerType,
   } = params;
+
+  const lengthName = (l: DeliveryLength) => LENGTH_NAMES[bowlerType][l];
 
   // Wide / no-ball: skip the tactical bluff/expectation narrative entirely
   if (chaosEvent === "wide") {
     const lName = LINE_NAMES[deliveryLine];
     return deliveryLength === "yorker"
-      ? `Wide! The yorker on ${lName} strayed too far — umpire's arm goes out. Extra run, bowl again.`
+      ? `Wide! The ${lengthName(deliveryLength)} on ${lName} strayed too far — umpire's arm goes out. Extra run, bowl again.`
       : deliveryLength === "bouncer"
-      ? `Wide! The bouncer on ${lName} was adjudged wide — too far from the batsman's body. Extra run, bowl again.`
+      ? `Wide! The ${lengthName(deliveryLength)} on ${lName} was adjudged wide — too far from the batsman's body. Extra run, bowl again.`
       : `Wide called on ${lName}! The ball drifted outside the tramline. Extra run, bowl again.`;
   }
   if (chaosEvent === "no_ball") {
-    const dName = describeDelivery(deliveryLength, deliveryVariation);
+    const dName = describeDelivery(deliveryLength, deliveryVariation, bowlerType);
     const lName = LINE_NAMES[deliveryLine];
     return `No-ball! The ${dName} on ${lName} — foot over the crease. Free run added. Next delivery is a FREE HIT — the batsman cannot be dismissed!`;
   }
 
   const parts: string[] = [];
-  const dName       = describeDelivery(deliveryLength, deliveryVariation);
+  const dName       = describeDelivery(deliveryLength, deliveryVariation, bowlerType);
   const lName       = LINE_NAMES[deliveryLine];
-  const expName     = describeDelivery(aiExpectation.length, aiExpectation.variation);
+  const expName     = describeDelivery(aiExpectation.length, aiExpectation.variation, bowlerType);
   const direction   = angleToDirectionLabel(shotAngle);
 
   // --- Expectation / Bluff line ---
@@ -218,7 +291,7 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
     }
   } else if (wasLengthBluff) {
     parts.push(
-      `Length surprise! The batsman expected a ${LENGTH_NAMES[aiExpectation.length]} but you bowled a ${dName} on ${lName}.`
+      `Length surprise! The batsman expected a ${lengthName(aiExpectation.length)} but you bowled a ${dName} on ${lName}.`
     );
   } else if (wasVariationBluff) {
     parts.push(
@@ -257,78 +330,55 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
 
   // --- Outcome line ---
   if (isWicket) {
-    const wideOff  = deliveryLine === "wide_outside_off";
-    const offStump = deliveryLine === "off";
-    const middle   = deliveryLine === "middle";
-    const legStump = deliveryLine === "leg";
-    const wideLeg  = deliveryLine === "wide_outside_leg";
-
+    // How the wicket falls comes from the shared table, not a second copy of the
+    // rules — so the narrative can't claim a catch the tracer never drew.
+    const { kind } = classifyDismissal(deliveryLength, deliveryLine, bowlerType);
     let wicketDesc: string;
 
-    if (deliveryLength === "yorker") {
-      if (wideOff) {
-        // Can't bowl on wide outside off — ball misses stumps; batsman jams it to fielder
-        const closestFielder = getNearestFielder(270); // point area (off side, square)
-        wicketDesc = `Jammed onto the outside edge trying to dig it out — caught at ${closestFielder}!`;
-      } else if (offStump) {
-        wicketDesc = "Yorker on off stump — too full and too straight to dig out. Bowled!";
-      } else if (middle) {
-        wicketDesc = "Pinned to the crease — the yorker uprooted middle stump. Clean bowled!";
-      } else if (legStump) {
-        wicketDesc = "Toe-crushing yorker on leg stump — batsman missed, bowled behind the legs!";
-      } else {
-        // wide_outside_leg — usually a wide; if wicket, unlikely bowled
-        wicketDesc = "The yorker angling in caught the inside edge — deflects onto the stumps!";
-      }
-    } else if (deliveryLength === "bouncer") {
-      if (wideOff || offStump) {
-        const closestFielder = getNearestFielder(212); // gully is ~212°
-        wicketDesc = `The bouncer climbed sharply outside off — fended straight to ${closestFielder}. Caught!`;
-      } else if (wideLeg) {
-        wicketDesc = "Tried to duck under the bouncer — gloved it through to the keeper. Caught!";
-      } else {
-        const topEdgeFielder = getNearestFielderData(90); // square leg / fine leg area for top edge on bouncer
-        const topEdgeLocation = topEdgeFielder.isDeep ? "in the deep" : "in the circle";
-        wicketDesc = `The bouncer got the top edge — straight up, caught ${topEdgeLocation} by ${topEdgeFielder.name}!`;
-      }
-    } else if (deliveryLength === "full") {
-      if (wideOff) {
-        wicketDesc = "Reached for the drive on the up — thick outside edge carries to the keeper. Caught behind!";
-      } else if (offStump) {
-        const closestFielder = getNearestFielder(195); // slip area (behind the batsman, off side)
-        wicketDesc = `Tried to drive through cover — edged to ${closestFielder}. Caught!`;
-      } else if (middle) {
-        const closestFielder = getNearestFielder(345); // mid-off area
-        wicketDesc = `Full and straight — drove uppishly, straight to ${closestFielder}. Caught!`;
-      } else {
-        // leg or wide_outside_leg
-        const closestFielder = getNearestFielder(55); // mid-wicket area
-        wicketDesc = `Miscued the flick to leg — caught at ${closestFielder}!`;
-      }
-    } else if (deliveryLength === "good_length") {
-      if (wideOff) {
-        const closestFielder = getNearestFielder(212); // gully area
-        wicketDesc = `Good length outside off, nipped back — outside edge flies to ${closestFielder}. Caught!`;
-      } else if (offStump) {
-        wicketDesc = "Good length on off stump — edged through to the keeper. Caught behind!";
-      } else if (middle) {
-        wicketDesc = "Kept low through the gate — bowled middle stump!";
-      } else {
-        // leg or wide_outside_leg — LBW territory, not caught-behind
-        wicketDesc = "Nipped back sharply — rapped on the front pad in front of middle. LBW!";
-      }
+    if (chaosEvent === "spectacular_catch") {
+      // Boundary catch — the batsman middled it. Any "edged / fended / mistimed"
+      // narrative would contradict the chaos line that follows.
+      wicketDesc = `Launched ${direction} and it was sailing over the rope — but ${getNearestFielder(shotAngle)} was underneath it.`;
+    } else if (kind === "bowled") {
+      const isSpin = bowlerType === "spin";
+      wicketDesc =
+        deliveryLength === "good_length"  ? (isSpin
+            ? "Skidded on through the gate — bowled middle stump!"
+            : "Kept low through the gate — bowled middle stump!")
+        : deliveryLine === "off"          ? (isSpin
+            ? "Tossed up on off stump — drawn forward, beaten in the flight. Bowled!"
+            : "Yorker on off stump — too full and too straight to dig out. Bowled!")
+        : deliveryLine === "middle"       ? (isSpin
+            ? "Dragged forward and beaten — the ball spun through the gap and took middle. Clean bowled!"
+            : "Pinned to the crease — the yorker uprooted middle stump. Clean bowled!")
+        : deliveryLine === "leg"          ? (isSpin
+            ? "Pitched on leg and turned past the pad — bowled behind the legs!"
+            : "Toe-crushing yorker on leg stump — batsman missed, bowled behind the legs!")
+        : (isSpin
+            ? "Turned back in off the pitch, caught the inside edge — deflects onto the stumps. Bowled!"
+            : "The yorker angling in caught the inside edge — deflects onto the stumps. Bowled!");
+    } else if (kind === "stumped") {
+      wicketDesc =
+        deliveryLine === "wide_outside_leg"
+          ? "Went for the sweep, missed it, and the momentum carried them past the line — the keeper whips the bails off. Stumped!"
+          : deliveryLine === "wide_outside_off"
+          ? "Dragged wide of off stump and chased it — beaten in the flight, and the keeper has the bails off in a flash. Stumped!"
+          : "Drawn out of the crease by the flight and beaten — the keeper does the rest. Stumped!";
+    } else if (kind === "lbw") {
+      wicketDesc = bowlerType === "spin"
+        ? "Spun back into the pad — struck plumb in front of middle. LBW!"
+        : "Nipped back sharply — rapped on the front pad in front of middle. LBW!";
+    } else if (kind === "caught_behind") {
+      wicketDesc =
+        deliveryLength === "full"         ? "Reached for the drive on the up — thick outside edge carries through. Caught behind!"
+        : deliveryLength === "good_length" ? "Good length on off stump — edged through to the keeper. Caught behind!"
+        : bowlerType === "spin"            ? "Went back to cut and got a thin edge through to the keeper. Caught behind!"
+        : "Tried to duck out of the way — gloved it through to the keeper. Caught behind!";
     } else {
-      // short ball
-      if (wideOff) {
-        const closestFielder = getNearestFielder(212); // gully area
-        wicketDesc = `The short ball climbed outside off — outside edge flies to ${closestFielder}. Caught!`;
-      } else if (wideLeg) {
-        wicketDesc = "Tried to duck — gloved it through to the keeper. Caught!";
-      } else {
-        const pullFielder = getNearestFielderData(90); // square leg area
-        const pullLocation = pullFielder.isDeep ? "Caught in the deep!" : "Caught inside the circle!";
-        wicketDesc = `Mistimed the pull shot — straight to ${pullFielder.name}. ${pullLocation}`;
-      }
+      // Caught in the field — name the fielder the tracer actually points at
+      const catcher = getNearestFielderData(shotAngle);
+      const where = catcher.isDeep ? "in the deep" : "in the circle";
+      wicketDesc = `${caughtShotDescription(deliveryLength, deliveryLine, bowlerType)} — caught ${where} by ${catcher.name}!`;
     }
 
     parts.push(wicketDesc);
@@ -342,6 +392,12 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
         break;
       case "upper_cut":
         parts.push(`Audacious upper cut over third man — cleared the rope with ease. Six!`);
+        break;
+      case "slog_sweep":
+        parts.push(`Slog swept into the stands over the leg side — went down on one knee and launched it. Six!`);
+        break;
+      case "cut":
+        parts.push(`Rocked back and carved it over the off side — beat the rope comfortably. Six!`);
         break;
       case "lofted_slog":
         parts.push(
@@ -366,7 +422,7 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
         );
     }
   } else if (runsScored >= 4) {
-    const verb = shotVerb(contactType, deliveryLength, deliveryLine, shotAngle);
+    const verb = shotVerb(contactType, deliveryLength, deliveryLine, bowlerType, shotAngle);
     switch (contactType) {
       case "edged_off":
         if (deliveryLength === "yorker") {
@@ -392,6 +448,12 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
       case "upper_cut":
         parts.push(`Audacious upper cut ${direction} — beats the fielder to the boundary. Four runs.`);
         break;
+      case "slog_sweep":
+        parts.push(`Slog swept ${direction} — got right underneath it and found the rope. Four runs.`);
+        break;
+      case "cut":
+        parts.push(`Carved ${direction} off the back foot — raced away. Four runs.`);
+        break;
       case "scoop": {
         const scoopTarget = shotAngle < 157.5 ? "over fine leg" : "over the keeper";
         parts.push(`Scooped ${scoopTarget} — improvised perfectly. Four runs.`);
@@ -410,7 +472,7 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
         }
     }
   } else if (runsScored >= 2) {
-    const verb = shotVerb(contactType, deliveryLength, deliveryLine, shotAngle);
+    const verb = shotVerb(contactType, deliveryLength, deliveryLine, bowlerType, shotAngle);
     parts.push(
       coverage > 0.5
         ? `Good fielding restricted it to ${runsScored} — well set but couldn't prevent the run.`
@@ -419,7 +481,7 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
         : `The ball bisected the fielders — ${runsScored} runs.`
     );
   } else if (runsScored === 1) {
-    const verb = shotVerb(contactType, deliveryLength, deliveryLine, shotAngle);
+    const verb = shotVerb(contactType, deliveryLength, deliveryLine, bowlerType, shotAngle);
     parts.push(
       coverage > 0.7
         ? `Excellent fielding — the batsman could only scramble a single.`
@@ -460,8 +522,11 @@ export function generateFeedbackMessage(params: FeedbackParams): string {
       parts.push(`Tip: The batsman upper cut over backward point — a third man or deep backward point would have saved that.`);
     } else if (contactType === "scoop") {
       parts.push(`Tip: The batsman scooped over fine leg — a deeper fine leg could cut that off.`);
-    } else if (contactType === "pull") {
-      parts.push(`Tip: Pull shot found the gap — a ${isSix ? "deep " : ""}mid-wicket or square leg would threaten that shot next time.`);
+    } else if (contactType === "pull" || contactType === "slog_sweep") {
+      const shot = contactType === "pull" ? "Pull shot" : "Slog sweep";
+      parts.push(`Tip: ${shot} found the gap — a ${isSix ? "deep " : ""}mid-wicket or square leg would threaten that shot next time.`);
+    } else if (contactType === "cut") {
+      parts.push(`Tip: The cut beat the off side — a ${isSix ? "deep " : ""}point or backward point would have cut that off.`);
     } else if (contactType === "top_edge") {
       parts.push(`Tip: Top edge sailed over the keeper — a fine leg or long stop would have saved those runs.`);
     } else {

@@ -94,8 +94,9 @@ export default function BallTracer({ outcome, onComplete }: BallTracerProps) {
         </>
       )}
 
-      {/* Wicket flash at batsman's stumps (y≈40) — hard red square */}
-      {isWicket && (
+      {/* Wicket flash at batsman's stumps (y≈40) — bowled/LBW only.
+          Caught wickets are shown by the fielder highlight in CricketField instead. */}
+      {isBowledOrLBW && (
         <motion.rect
           fill="var(--blood)"
           initial={{ x: 50, y: 40, width: 0, height: 0, opacity: 0.9 }}

@@ -6,6 +6,14 @@
 
 export type BatsmanArchetype = "aggressive" | "anchor" | "slogger" | "accumulator";
 
+/**
+ * Which hand the batsman bats with. The engine's angle tables are all written
+ * from a right-hander's perspective; a left-hander is produced by mirroring the
+ * field in and the shot angle out (see engine/simulation.ts), never by adding a
+ * second set of tables.
+ */
+export type BattingHand = "right" | "left";
+
 /** Where the ball pitches */
 export type DeliveryLength =
   | "yorker"      // full, near feet
@@ -14,14 +22,29 @@ export type DeliveryLength =
   | "short"       // back of a length
   | "bouncer";    // very short, aimed at body/head
 
-/** How the ball moves / pace variation */
+/**
+ * How the ball moves. Pace and spin bowlers draw from disjoint halves of this
+ * union — which half is offered comes from the bowler profile (engine/bowlers.ts),
+ * so a seamer is never asked to bowl a googly.
+ *
+ * Directions are described from the right-hander's point of view, as everywhere
+ * else in the engine; handedness is applied geometrically, not per-variation.
+ */
 export type DeliveryVariation =
+  // --- Pace ---
   | "pace"        // standard, no variation
   | "slower_ball" // significant pace drop
   | "off_cutter"  // moves into right-hander off pitch
   | "leg_cutter"  // moves away from right-hander
   | "outswing"    // swings away in the air
-  | "inswing";    // swings in through the air
+  | "inswing"     // swings in through the air
+  // --- Spin ---
+  | "off_break"   // stock off-spinner's ball — turns into the right-hander
+  | "leg_break"   // turns away from the right-hander
+  | "googly"      // the wrong'un — turns in, disguised as a leg break
+  | "arm_ball"    // no turn, holds its line with the arm
+  | "top_spinner" // overspin: extra dip and bounce, no lateral turn
+  | "slider";     // skids on flat and quick, hurries the batsman
 
 /** Combined AI reading of expected delivery */
 export interface AIExpectation {
@@ -89,7 +112,6 @@ export interface BatsmanProfile {
   archetype: BatsmanArchetype;
   displayName: string;
   /** Shot selection weights by zone (sum should ~= 1) */
-  shotPreferences: Record<FieldZone, number>;
   aggression: number;          // 0-1
   riskTolerance: number;       // 0-1
   spinVulnerability: number;   // 0-1 — weakness vs slower_ball / leg_cutter
@@ -127,6 +149,8 @@ export interface BallOutcome {
   isExtraDelivery: boolean;
   /** True for no-balls — the next delivery is a free hit (batsman cannot be dismissed) */
   triggersFreeHit: boolean;
+  /** Hand the striker batted with — shotDirection is in field space, this explains it */
+  battingHand: BattingHand;
 }
 
 // --- Match ---
@@ -149,6 +173,7 @@ export interface MatchState {
 export interface BatsmanInMatch {
   archetype: BatsmanArchetype;
   name: string;
+  hand: BattingHand;
   confidence: number;   // 0-100, updated after each ball
   ballsFaced: number;
   runsScored: number;
@@ -158,6 +183,8 @@ export interface BatsmanInMatch {
 
 export interface GameState {
   match: MatchState;
+  /** Which bowler the player chose for this over (see engine/bowlers.ts) */
+  bowlerId: string;
   batsman: BatsmanInMatch;
   nonStriker: BatsmanInMatch;
   field: {

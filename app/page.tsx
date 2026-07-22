@@ -6,6 +6,7 @@ import { useGameStore } from "@/store/gameStore";
 import { useTutorialStore } from "@/store/tutorialStore";
 import NewPlayerModal from "@/components/tutorial/NewPlayerModal";
 import type { DailyChallenge } from "@/types/game";
+import { BOWLERS } from "@/engine/bowlers";
 
 function IconUsers() {
   return (
@@ -48,6 +49,7 @@ export default function HomePage() {
   const [showCustom, setShowCustom] = useState(false);
   const [customTarget, setCustomTarget] = useState(12);
   const [customWickets, setCustomWickets] = useState(3);
+  const [bowlerId, setBowlerId] = useState(BOWLERS[0].id);
   const [stats, setStats] = useState<{ total_plays: number; unique_users: number } | null>(null);
 
   // New player modal state
@@ -74,7 +76,7 @@ export default function HomePage() {
   /** Execute the pending game after modal interaction */
   const executePendingGame = () => {
     if (pendingGameType === "daily" && pendingChallenge) {
-      setDailyChallenge(pendingChallenge);
+      setDailyChallenge(pendingChallenge, bowlerId);
       router.push("/play");
     } else if (pendingGameType === "custom") {
       startGame({
@@ -85,12 +87,14 @@ export default function HomePage() {
         batsmanName: "Power Hitter",
         nonStrikerArchetype: "accumulator",
         nonStrikerName: "The Rotator",
+        bowlerId,
       });
       router.push("/play");
     }
   };
 
   const handleNewPlayerTutorial = () => {
+    useGameStore.setState({ bowlerId: BOWLERS[0].id }); // tutorial copy assumes pace
     setShowNewPlayerModal(false);
     startTutorial("new_player_prompt");
     router.push("/play");
@@ -114,7 +118,7 @@ export default function HomePage() {
         setLoading(false);
         return;
       }
-      setDailyChallenge(challenge);
+      setDailyChallenge(challenge, bowlerId);
       router.push("/play");
     } catch {
       setError("Could not load today's challenge. Try again!");
@@ -133,11 +137,15 @@ export default function HomePage() {
       batsmanName: "Power Hitter",
       nonStrikerArchetype: "accumulator",
       nonStrikerName: "The Rotator",
+      bowlerId,
     });
     router.push("/play");
   };
 
   const handleHowToPlay = () => {
+    // The tutorial copy names yorkers and slower balls, so it only makes sense
+    // with a pace bowler in hand.
+    useGameStore.setState({ bowlerId: BOWLERS[0].id });
     startTutorial("home_button");
     router.push("/play");
   };
@@ -178,6 +186,50 @@ export default function HomePage() {
           <br />
           Defend your total in the final over — or watch it slip away.
         </p>
+      </div>
+
+      {/* Bowler pick — applies to whichever mode you start */}
+      <div className="w-full flex flex-col gap-2" style={{ maxWidth: 400 }}>
+        <p className="brut-label" style={{ color: "var(--muted)" }}>WHO BOWLS THE OVER</p>
+        <div className="flex flex-col gap-1.5">
+          {BOWLERS.map((b) => {
+            const active = bowlerId === b.id;
+            return (
+              <button
+                key={b.id}
+                onClick={() => setBowlerId(b.id)}
+                className="px-3 py-2.5 text-left"
+                style={{
+                  background: "var(--ink)",
+                  border: `2px solid ${active ? "var(--blood)" : "var(--faint)"}`,
+                  cursor: "pointer",
+                  transition: "border-color 80ms steps(2)",
+                }}
+              >
+                <span className="flex items-baseline justify-between gap-2">
+                  <span
+                    className="font-mono font-bold text-xs uppercase tracking-widest"
+                    style={{ color: active ? "var(--blood)" : "var(--paper)" }}
+                  >
+                    {b.name}
+                  </span>
+                  <span
+                    className="font-mono text-[9px] uppercase tracking-widest"
+                    style={{ color: "var(--faint)" }}
+                  >
+                    {b.type}
+                  </span>
+                </span>
+                <span
+                  className="block font-mono text-[10px] mt-1 leading-snug"
+                  style={{ color: "var(--muted)" }}
+                >
+                  {b.blurb}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Mode buttons */}

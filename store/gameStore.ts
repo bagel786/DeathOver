@@ -6,9 +6,11 @@ import type {
   DeliveryLength,
   DeliveryVariation,
   BatsmanArchetype,
+  BattingHand,
   GameResult,
 } from "@/types/game";
 import { BATSMAN_PROFILES } from "@/engine/batsmanAI";
+import { BOWLERS, getBowler } from "@/engine/bowlers";
 import { recomputeFielderMeta } from "@/engine/fieldMapping";
 import { calculateDeliveryOutcome } from "@/engine/simulation";
 import { createGameRng } from "@/engine/rng";
@@ -65,14 +67,40 @@ function buildDefaultMatch(
   };
 }
 
-function buildBatsman(archetype: BatsmanArchetype, confidence = 50) {
+function buildBatsman(
+  archetype: BatsmanArchetype,
+  confidence = 50,
+  hand: BattingHand = "right"
+) {
   return {
     archetype,
     name: BATSMAN_PROFILES[archetype].displayName,
+    hand,
     confidence,
     ballsFaced: 0,
     runsScored: 0,
   };
+}
+
+/** Roughly a quarter of batsmen are left-handed. */
+const rollHand = (rng: () => number): BattingHand => (rng() < 0.25 ? "left" : "right");
+
+/**
+ * RNG sub-sequence offsets, kept distinct so seeded rolls never collide:
+ *   per-ball outcome     → rngCallCount
+ *   wicket replacement   → rngCallCount * 100 + 50
+ *   opening batsmen hand → 900 / 901
+ */
+const HAND_SEED_STRIKER = 900;
+const HAND_SEED_NON_STRIKER = 901;
+
+/** Hands for the two openers — seeded on daily challenges so everyone faces the same pair. */
+function rollOpeningHands(seed: number | null): [BattingHand, BattingHand] {
+  if (seed == null) return [rollHand(Math.random), rollHand(Math.random)];
+  return [
+    rollHand(createGameRng(seed, HAND_SEED_STRIKER)),
+    rollHand(createGameRng(seed, HAND_SEED_NON_STRIKER)),
+  ];
 }
 
 // ============================================================
@@ -82,6 +110,7 @@ const INITIAL_STATE: GameState = {
   // Fixed 7 wickets for SSR — Math.random() here causes hydration mismatch.
   // Actual random wicket counts are generated in startGame / setDailyChallenge / resetGame.
   match: buildDefaultMatch(12, 6, 7),
+  bowlerId: BOWLERS[0].id,
   batsman: buildBatsman("aggressive", 65),
   nonStriker: buildBatsman("accumulator"),
   field: { fielders: buildDefaultFielders() },
@@ -109,7 +138,7 @@ interface GameStore extends GameState {
   // Game management
   startGame: (config: GameConfig) => void;
   resetGame: () => void;
-  setDailyChallenge: (challenge: import("@/types/game").DailyChallenge) => void;
+  setDailyChallenge: (challenge: import("@/types/game").DailyChallenge, bowlerId?: string) => void;
 }
 
 export interface GameConfig {
@@ -122,6 +151,8 @@ export interface GameConfig {
   nonStrikerName: string;
   batsmanConfidence?: number;
   seed?: number;
+  /** Which bowler the player picked. Falls back to the default if unset. */
+  bowlerId?: string;
 }
 
 // ============================================================
@@ -241,6 +272,8 @@ export const useGameStore = create<GameStore>()(
         deliveryLine,
         fielders: field.fielders,
         batsman: batsmanProfile,
+        bowler: getBowler(state.bowlerId),
+        battingHand: batsman.hand,
         batsmanConfidence: batsman.confidence,
         matchSituation: {
           runsNeeded: match.target - match.runsConceded,
@@ -265,8 +298,11 @@ export const useGameStore = create<GameStore>()(
         if (!outcome.isExtraDelivery) {
           draft.match.ballsBowled += 1;
         }
-        // Track whether the next ball is a free hit
-        draft.match.nextBallIsFreeHit = outcome.triggersFreeHit;
+        // Track whether the next ball is a free hit. By the laws a free hit is only
+        // consumed by a legal delivery — a wide or no-ball in between carries it over.
+        draft.match.nextBallIsFreeHit =
+          outcome.triggersFreeHit ||
+          (outcome.isExtraDelivery && draft.match.nextBallIsFreeHit);
 
         // Extra deliveries (wide/no-ball) don't affect striker's faced count or confidence
         if (outcome.isExtraDelivery) {
@@ -293,7 +329,8 @@ export const useGameStore = create<GameStore>()(
           const newArchetype = archetypes[Math.floor(wicketRng() * archetypes.length)];
           // New batsman starts nervous (confidence 25-45)
           const newConfidence = 25 + Math.floor(wicketRng() * 21);
-          draft.batsman = buildBatsman(newArchetype, newConfidence);
+          // wicketRng is already a seeded sequence — one more draw needs no new offset
+          draft.batsman = buildBatsman(newArchetype, newConfidence, rollHand(wicketRng));
           // Non-striker stays unchanged — they don't cross on a caught/bowled
         } else {
           // Update confidence — death batsmen are fearless, build momentum fast
@@ -314,6 +351,7 @@ export const useGameStore = create<GameStore>()(
             // Swap all fields explicitly (Immer requires direct mutation, not reassignment)
             const tmpArchetype = s.archetype; s.archetype = ns.archetype; ns.archetype = tmpArchetype;
             const tmpName = s.name; s.name = ns.name; ns.name = tmpName;
+            const tmpHand = s.hand; s.hand = ns.hand; ns.hand = tmpHand;
             const tmpConf = s.confidence; s.confidence = ns.confidence; ns.confidence = tmpConf;
             const tmpBalls = s.ballsFaced; s.ballsFaced = ns.ballsFaced; ns.ballsFaced = tmpBalls;
             const tmpRuns = s.runsScored; s.runsScored = ns.runsScored; ns.runsScored = tmpRuns;
@@ -352,11 +390,14 @@ export const useGameStore = create<GameStore>()(
         const rawBalls = Number(config.totalBalls);
         const safeTotalBalls = Math.min(36, Math.max(1, isNaN(rawBalls) ? 6 : rawBalls));
         draft.match = buildDefaultMatch(safeTarget, safeTotalBalls, wickets);
+        draft.bowlerId = getBowler(config.bowlerId).id;
+        const [strikerHand, nonStrikerHand] = rollOpeningHands(config.seed ?? null);
         draft.batsman = buildBatsman(
           config.batsmanArchetype,
-          config.batsmanConfidence ?? 50
+          config.batsmanConfidence ?? 50,
+          strikerHand
         );
-        draft.nonStriker = buildBatsman(config.nonStrikerArchetype);
+        draft.nonStriker = buildBatsman(config.nonStrikerArchetype, 50, nonStrikerHand);
         draft.field = { fielders: buildDefaultFielders() };
         draft.currentDelivery = { length: null, variation: null, line: null };
 
@@ -376,16 +417,19 @@ export const useGameStore = create<GameStore>()(
     // resetGame — go back to initial state
     // --------------------------------------------------------
     resetGame() {
+      const keptBowlerId = get().bowlerId; // a reset re-runs the same over, same bowler
       const archetypes: BatsmanArchetype[] = ["aggressive", "anchor", "slogger", "accumulator"];
       const wickets = 1 + Math.floor(Math.random() * 10);
       const target = 8 + Math.floor(Math.random() * 13); // 8-20
       const confidence = 25 + Math.floor(Math.random() * 56); // 25-80
       const arch = archetypes[Math.floor(Math.random() * archetypes.length)];
       const nsArch = archetypes[Math.floor(Math.random() * archetypes.length)];
+      const [strikerHand, nonStrikerHand] = rollOpeningHands(null);
       set(() => ({
         match: buildDefaultMatch(target, 6, wickets),
-        batsman: buildBatsman(arch, confidence),
-        nonStriker: buildBatsman(nsArch),
+        bowlerId: keptBowlerId,
+        batsman: buildBatsman(arch, confidence, strikerHand),
+        nonStriker: buildBatsman(nsArch, 50, nonStrikerHand),
         field: { fielders: buildDefaultFielders() },
         currentDelivery: { length: null, variation: null, line: null },
         ballLog: [],
@@ -397,8 +441,9 @@ export const useGameStore = create<GameStore>()(
     // --------------------------------------------------------
     // setDailyChallenge — initialize from Supabase row
     // --------------------------------------------------------
-    setDailyChallenge(challenge) {
+    setDailyChallenge(challenge, bowlerId) {
       set((draft) => {
+        draft.bowlerId = getBowler(bowlerId).id;
         // Use seeded wickets from the challenge so every player faces the same situation.
         // Fall back to random for legacy rows that pre-date this field.
         const wcks = challenge.wickets_remaining ?? (1 + Math.floor(Math.random() * 10));
@@ -406,11 +451,17 @@ export const useGameStore = create<GameStore>()(
         const VALID_ARCHETYPES: BatsmanArchetype[] = ["aggressive", "anchor", "slogger", "accumulator"];
         const sanitizeArchetype = (a: unknown): BatsmanArchetype =>
           VALID_ARCHETYPES.includes(a as BatsmanArchetype) ? (a as BatsmanArchetype) : "aggressive";
+        const [strikerHand, nonStrikerHand] = rollOpeningHands(challenge.rng_seed);
         draft.batsman = buildBatsman(
           sanitizeArchetype(challenge.batsman_archetype),
-          challenge.batsman_confidence
+          challenge.batsman_confidence,
+          strikerHand
         );
-        draft.nonStriker = buildBatsman(sanitizeArchetype(challenge.non_striker_archetype));
+        draft.nonStriker = buildBatsman(
+          sanitizeArchetype(challenge.non_striker_archetype),
+          50,
+          nonStrikerHand
+        );
         draft.field = { fielders: buildDefaultFielders() };
         draft.currentDelivery = { length: null, variation: null, line: null };
 

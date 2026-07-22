@@ -15,11 +15,14 @@ import type {
   ChaosEvent,
   BallOutcome,
   AIExpectation,
+  BattingHand,
 } from "@/types/game";
-import { getZoneCoverage, cartesianToPolar } from "@/engine/fieldMapping";
+import { getZoneCoverage, cartesianToPolar, mirrorAngle, mirrorFielders } from "@/engine/fieldMapping";
 import { getAIExpectation, chooseShotDirection } from "@/engine/batsmanAI";
 import { generateFeedbackMessage } from "@/engine/feedback";
 import { createGameRng } from "@/engine/rng";
+import { classifyDismissal, KEEPER_ANGLE, KEEPER_DISTANCE } from "@/engine/dismissal";
+import type { BowlerProfile } from "@/engine/bowlers";
 
 export interface DeliveryInput {
   ballNumber: number;
@@ -28,6 +31,10 @@ export interface DeliveryInput {
   deliveryLine: DeliveryLine;
   fielders: Fielder[];
   batsman: BatsmanProfile;
+  /** Who's bowling — decides the available variations and how each length behaves */
+  bowler: BowlerProfile;
+  /** Right or left handed — mirrors the geometry, nothing else */
+  battingHand: BattingHand;
   batsmanConfidence: number;
   matchSituation: {
     runsNeeded: number;
@@ -69,6 +76,16 @@ const VARIATION_CONTACT_MOD: Record<DeliveryVariation, number> = {
   leg_cutter:  -0.12, // away movement, but less effective at death
   outswing:    -0.08, // late swing, but batsmen plant front foot anyway
   inswing:     -0.06, // swings in, batsmen use the pace
+
+  // --- Spin ---
+  // Spin lives or dies on deception rather than pace, so the spread here is
+  // wider than for seam: the stock ball is readable, the wrong'un is not.
+  off_break:   -0.10, // stock ball — turns, but it's the one they're watching for
+  leg_break:   -0.13, // turns away, harder to reach than the off break
+  googly:      -0.22, // the surprise ball — biggest deception in the game
+  arm_ball:    +0.04, // holds its line: readable, but the lack of turn beats a committed slog
+  top_spinner: -0.15, // dips and bounces — mishits balloon off the splice
+  slider:      +0.02, // skids on flat — quick, but it's the ball they can rely on
 };
 
 // ==============================================================
@@ -82,6 +99,16 @@ const VARIATION_VULNERABILITY: Partial<Record<
   off_cutter:  "spinVulnerability",
   leg_cutter:  "spinVulnerability",
   // pace / outswing / inswing: use average vulnerability (handled below)
+
+  // Every spin variation keys off spinVulnerability — this is what finally makes
+  // that archetype stat matter. Against a spinner, who you're bowling to decides
+  // far more than it does against seam.
+  off_break:   "spinVulnerability",
+  leg_break:   "spinVulnerability",
+  googly:      "spinVulnerability",
+  arm_ball:    "spinVulnerability",
+  top_spinner: "bounceVulnerability", // overspin beats them off the deck, not sideways
+  slider:      "spinVulnerability",
 };
 
 // ==============================================================
@@ -101,8 +128,8 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     deliveryLength,
     deliveryVariation,
     deliveryLine,
-    fielders,
     batsman,
+    bowler,
     batsmanConfidence,
     matchSituation,
     baseSeed,
@@ -111,6 +138,15 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     recentYorkerCount,
     isFreeHit,
   } = input;
+
+  // Handedness: run the whole simulation in right-hander space. Mirroring the
+  // field here means every angle table below — shot angles, dismissal catch
+  // angles, coverage, direction labels — stays correct without knowing the hand.
+  // The shot angle is mirrored back to field space at the return.
+  const isSpin = bowler.type === "spin";
+  const isLeft = input.battingHand === "left";
+  const fielders = isLeft ? mirrorFielders(input.fielders) : input.fielders;
+  const toFieldSpace = (angle: number) => (isLeft ? mirrorAngle(angle) : angle);
 
   // Create a deterministic RNG for this ball
   const seed = baseSeed !== null ? baseSeed : Math.floor(Math.random() * 0xffffffff);
@@ -128,10 +164,15 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     leg:              0.025,
     wide_outside_leg: 0.09,  // high — any height/deviation down leg = wide
   };
-  const wideLengthMod =
-    deliveryLength === "yorker"  ? 1.5 : // precise execution required
-    deliveryLength === "bouncer" ? 1.3 : // height + line both scrutinised
-    1.0;
+  // A yorker is wide-prone because it's a precision ball at 145kph and a bouncer
+  // gets scrutinised for height. Neither applies to spin: a flighted off-break is
+  // the easiest ball in cricket to land, and a long hop is only ever punished by
+  // the bat, not the umpire.
+  const wideLengthMod = isSpin
+    ? 0.7
+    : deliveryLength === "yorker"  ? 1.5 // precise execution required
+    : deliveryLength === "bouncer" ? 1.3 // height + line both scrutinised
+    : 1.0;
   const wideProb = WIDE_LINE_PROB[deliveryLine] * wideLengthMod;
   const wideRoll = rng();
 
@@ -151,10 +192,11 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     const byeRuns = byeRoll < 0.05 ? 2 : byeRoll < 0.20 ? 1 : 0;
     const totalWideRuns = 1 + byeRuns;
 
+    const wideLengthName = bowler.lengthLabels[deliveryLength].toLowerCase();
     const wideFeedback = deliveryLength === "yorker"
-      ? `Wide! The yorker attempt on ${lineNames[deliveryLine]} went too far — umpire signals immediately.${byeRuns > 0 ? ` Ball beats the keeper — ${byeRuns} bye${byeRuns > 1 ? "s" : ""} taken. ${totalWideRuns} runs, bowl again.` : " Extra run, bowl again."}`
+      ? `Wide! The ${wideLengthName} attempt on ${lineNames[deliveryLine]} went too far — umpire signals immediately.${byeRuns > 0 ? ` Ball beats the keeper — ${byeRuns} bye${byeRuns > 1 ? "s" : ""} taken. ${totalWideRuns} runs, bowl again.` : " Extra run, bowl again."}`
       : deliveryLength === "bouncer"
-      ? `Wide! The bouncer on ${lineNames[deliveryLine]} was called wide — too far down leg or climbing past the batsman.${byeRuns > 0 ? ` Ball goes past the keeper — ${byeRuns} bye${byeRuns > 1 ? "s" : ""} added. ${totalWideRuns} runs, bowl again.` : " Extra run, bowl again."}`
+      ? `Wide! The ${wideLengthName} on ${lineNames[deliveryLine]} was called wide — too far down leg or climbing past the batsman.${byeRuns > 0 ? ` Ball goes past the keeper — ${byeRuns} bye${byeRuns > 1 ? "s" : ""} added. ${totalWideRuns} runs, bowl again.` : " Extra run, bowl again."}`
       : byeRuns > 0
       ? `Wide called on ${lineNames[deliveryLine]}! Ball beats the keeper — ${byeRuns} bye${byeRuns > 1 ? "s" : ""} taken. ${totalWideRuns} runs total, bowl again.`
       : `Wide called on ${lineNames[deliveryLine]}! An extra run is added and you must bowl this ball again.`;
@@ -162,7 +204,7 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     return {
       ballNumber,
       delivery:        { length: deliveryLength, variation: deliveryVariation, line: deliveryLine },
-      fieldSnapshot:   fielders,
+      fieldSnapshot:   input.fielders, // real positions — the snapshot is for rendering
       aiExpectation:   { length: deliveryLength, variation: deliveryVariation },
       wasLengthBluff:  false,
       wasVariationBluff: false,
@@ -171,10 +213,11 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       isWicket:        false,
       isCaught:        false,
       chaosEvent:      "wide",
-      shotDirection:   { angle: 180, distance: 0.30 }, // drifts behind keeper
+      shotDirection:   { angle: 180, distance: 0.30 }, // drifts behind keeper (180° is its own mirror)
       feedbackMessage: wideFeedback,
       isExtraDelivery: true,
       triggersFreeHit: false,
+      battingHand:     input.battingHand,
     };
   }
 
@@ -195,14 +238,19 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
   // ==============================================================
   // STEP 2: AI expectation (field-read for length + heuristic for variation)
   // ==============================================================
-  const aiExpectation: AIExpectation = getAIExpectation(fielders, batsman, pressure, rng, lastVariation);
+  const aiExpectation: AIExpectation = getAIExpectation(
+    fielders, batsman, pressure, rng, lastVariation, bowler.variations
+  );
   const wasLengthBluff    = deliveryLength    !== aiExpectation.length;
   const wasVariationBluff = deliveryVariation !== aiExpectation.variation;
 
   // ==============================================================
   // STEP 3: Base contact probability (from length)
   // ==============================================================
-  let contactProb = BASE_CONTACT_LENGTH[deliveryLength];
+  // Baseline, then the bowler's own tuning — a Death Specialist's yorker is a
+  // different delivery from an Express Quick's, in the same slot.
+  let contactProb =
+    BASE_CONTACT_LENGTH[deliveryLength] + (bowler.lengthContactMod[deliveryLength] ?? 0);
 
   // ==============================================================
   // STEP 4: Variation modifier (movement / pace change)
@@ -278,7 +326,7 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
   // ==============================================================
   // STEP 9: Shot direction
   // ==============================================================
-  const shotDir = chooseShotDirection(batsman, deliveryLength, deliveryLine, pressure, rng);
+  const shotDir = chooseShotDirection(batsman, deliveryLength, deliveryLine, pressure, rng, bowler.type);
   let { angle: shotAngle, distance: shotDistance } = shotDir;
 
   // ==============================================================
@@ -307,7 +355,8 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
   let runsScored = 0;
   let isWicket = false;
   // How the ball was struck — used by feedback to describe the shot accurately
-  // "clean" | "edged_off" | "edged_leg" | "top_edge" | "scoop" | "pull" | "upper_cut" | "lofted_slog"
+  // "clean" | "edged_off" | "edged_leg" | "top_edge" | "scoop" | "lofted_slog"
+  // pace-only: "pull" | "upper_cut"   spin-only: "slog_sweep" | "cut"
   let contactType = "clean";
 
   if (roll > contactProb) {
@@ -332,16 +381,20 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
         // Yorker → scoop over fine leg (128°-165°) or ramp over keeper (165°-210°); no slog sweeps
         // Bouncer/short → pull/hook leg side (70°-135°) or upper-cut off side (200°-240°)
         // Full/good length → lofted leg-side slog (20°-80°) or straight (340°-20°)
-        if (deliveryLength === "yorker") {
+        if (isSpin && deliveryLength === "yorker") {
+          // Charged the flighted ball and heaved it — straight or over cow corner
+          shotAngle = rng() < 0.5 ? (340 + rng() * 40) % 360 : 20 + rng() * 60;
+          contactType = "lofted_slog";
+        } else if (deliveryLength === "yorker") {
           shotAngle = 128 + rng() * 82; // scoop / ramp: fine leg through keeper area
           contactType = "scoop";
         } else if (deliveryLength === "bouncer" || deliveryLength === "short") {
           if (rng() < 0.75) {
             shotAngle = 70 + rng() * 65;   // pull/hook: mid-wicket through fine leg
-            contactType = "pull";
+            contactType = isSpin ? "slog_sweep" : "pull";
           } else {
             shotAngle = 200 + rng() * 40;  // upper-cut: third man / gully
-            contactType = "upper_cut";
+            contactType = isSpin ? "cut" : "upper_cut";
           }
         } else {
           shotAngle = rng() < 0.5 ? (340 + rng() * 40) % 360 : 20 + rng() * 60; // straight or leg-side slog
@@ -350,16 +403,19 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
         shotDistance = 1.0;
       } else {
         result = "four"; runsScored = 4;
-        if (deliveryLength === "yorker") {
+        if (isSpin && deliveryLength === "yorker") {
+          shotAngle = rng() < 0.5 ? (340 + rng() * 40) % 360 : 20 + rng() * 60;
+          contactType = "lofted_slog";
+        } else if (deliveryLength === "yorker") {
           shotAngle = 128 + rng() * 82; // scoop / ramp to the boundary
           contactType = "scoop";
         } else if (deliveryLength === "bouncer" || deliveryLength === "short") {
           if (rng() < 0.75) {
             shotAngle = 70 + rng() * 65;
-            contactType = "pull";
+            contactType = isSpin ? "slog_sweep" : "pull";
           } else {
             shotAngle = 200 + rng() * 40;
-            contactType = "upper_cut";
+            contactType = isSpin ? "cut" : "upper_cut";
           }
         } else {
           shotAngle = rng() < 0.5 ? (340 + rng() * 40) % 360 : 20 + rng() * 60;
@@ -519,52 +575,24 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
 
   const originalAngle = shotAngle; // preserve for neighbourhood search
 
-  // Determine if a wicket is a catch (vs bowled / LBW)
-  // Uses the same delivery line + length logic as feedback.ts
-  let isCaught = false;
-  if (isWicket) {
-    const isBowled =
-      (deliveryLength === "yorker" && (deliveryLine === "off" || deliveryLine === "middle" || deliveryLine === "leg" || deliveryLine === "wide_outside_leg")) ||
-      (deliveryLength === "good_length" && deliveryLine === "middle");
-    const isLBW =
-      deliveryLength === "good_length" && (deliveryLine === "leg" || deliveryLine === "wide_outside_leg");
-    isCaught = !isBowled && !isLBW;
-  }
+  // How the wicket falls — shared with feedback.ts so the commentary and the
+  // ball tracer can never describe different dismissals.
+  const dismissal = classifyDismissal(deliveryLength, deliveryLine, bowler.type);
+  // A stumping is not a catch — but the ball still ends up in the keeper's gloves.
+  let isCaught =
+    isWicket && (dismissal.kind === "caught_behind" || dismissal.kind === "caught_field");
 
-  // For caught wickets, point the shot direction toward the catching fielder
-  if (isWicket && isCaught) {
+  if (isWicket && (dismissal.kind === "caught_behind" || dismissal.kind === "stumped")) {
+    // Straight through to the keeper — a short deflection, not a shot into the field
+    shotAngle = KEEPER_ANGLE;
+    shotDistance = KEEPER_DISTANCE;
+  } else if (isCaught) {
+    // Point the shot direction at the fielder nearest the catching position
     const fielderPolars = fielders.map((f) => cartesianToPolar(f.position.x, f.position.y));
-    // Determine target catching angle based on delivery (matches feedback.ts logic)
-    let catchAngle = originalAngle;
-    if (deliveryLength === "yorker" && deliveryLine === "wide_outside_off") {
-      catchAngle = 270; // point area
-    } else if (deliveryLength === "bouncer" && (deliveryLine === "wide_outside_off" || deliveryLine === "off")) {
-      catchAngle = 212; // gully
-    } else if (deliveryLength === "bouncer" && (deliveryLine === "middle" || deliveryLine === "leg")) {
-      catchAngle = 135; // fine leg / deep square
-    } else if (deliveryLength === "full" && deliveryLine === "wide_outside_off") {
-      catchAngle = 195; // behind wicket, off side (keeper area)
-    } else if (deliveryLength === "full" && deliveryLine === "off") {
-      catchAngle = 195; // slip area
-    } else if (deliveryLength === "full" && deliveryLine === "middle") {
-      catchAngle = 345; // mid-off
-    } else if (deliveryLength === "full" && (deliveryLine === "leg" || deliveryLine === "wide_outside_leg")) {
-      catchAngle = 55; // mid-wicket
-    } else if (deliveryLength === "good_length" && deliveryLine === "wide_outside_off") {
-      catchAngle = 212; // gully
-    } else if (deliveryLength === "short" && (deliveryLine === "wide_outside_off" || deliveryLine === "off")) {
-      catchAngle = 212; // gully
-    } else if (deliveryLength === "short" && deliveryLine === "wide_outside_leg") {
-      catchAngle = 180; // keeper area
-    } else if (deliveryLength === "short" && (deliveryLine === "middle" || deliveryLine === "leg")) {
-      catchAngle = 90; // square leg
-    }
-
-    // Find the nearest fielder to the catch angle
     let bestIdx = -1;
     let bestAngleDiff = 180;
     for (let i = 0; i < fielderPolars.length; i++) {
-      const diff = angDiff(fielderPolars[i].angle, catchAngle);
+      const diff = angDiff(fielderPolars[i].angle, dismissal.catchAngle);
       if (diff < bestAngleDiff) {
         bestAngleDiff = diff;
         bestIdx = i;
@@ -661,22 +689,17 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
   if (chaosRoll < 0.02) {
     const chaosType = rng();
 
-    // Determine the nature of the wicket for correct chaos gating:
-    // A yorker on middle/off stump is bowled, not caught — no dropped catch.
-    // A desperation-swing wicket is usually a top-edge catch or clean bowled — borderline.
-    const isYorkerBowled =
-      isWicket && deliveryLength === "yorker" &&
-      (deliveryLine === "middle" || deliveryLine === "off");
-    // Caught-behind / edge scenario: variation ball hit edge, or full/good-length off-side delivery
-    const isCatchableWicket =
-      isWicket &&
-      !isYorkerBowled &&
-      (deliveryLine === "off" || deliveryLine === "wide_outside_off" || deliveryLine === "middle");
-    // Stumping only makes sense on slower variations (batsman overbalances stepping out)
+    // Only an actual catch can be dropped. Read this off the shared dismissal
+    // table rather than re-deriving the rules here — a second copy is exactly
+    // how the commentary and the tracer drifted apart before.
+    const isCatchableWicket = isWicket && isCaught;
+    // Stumping only makes sense on slower variations (batsman overbalances stepping out).
+    // Against a spinner it's live on any ball — stepping out is the whole contest.
     const isStumpingCandidate =
       !isWicket &&
       runsScored === 0 && // ball wasn't properly hit
-      (deliveryVariation === "slower_ball" ||
+      (bowler.type === "spin" ||
+        deliveryVariation === "slower_ball" ||
         deliveryVariation === "off_cutter" ||
         deliveryVariation === "leg_cutter");
     // Overthrow / misfield only when ball actually reached the field (not a wicket)
@@ -686,6 +709,7 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
       // Dropped catch — reverses the wicket
       chaosEvent = "dropped_catch";
       isWicket = false;
+      isCaught = false; // grassed it — nothing was caught
       result = "dot";
       runsScored = 0;
     } else if (isStumpingCandidate && chaosType < 0.20) {
@@ -774,21 +798,20 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     aiExpectation,
     wasLengthBluff,
     wasVariationBluff,
-    result,
     runsScored,
     isWicket,
     coverage,
     shotAngle,
     chaosEvent,
-    batsman,
     fielders,
     contactType,
+    bowlerType: bowler.type,
   });
 
   return {
     ballNumber,
     delivery: { length: deliveryLength, variation: deliveryVariation, line: deliveryLine },
-    fieldSnapshot: fielders,
+    fieldSnapshot: input.fielders, // real positions — the snapshot is for rendering
     aiExpectation,
     wasLengthBluff,
     wasVariationBluff,
@@ -797,10 +820,11 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
     isWicket,
     isCaught,
     chaosEvent,
-    shotDirection: { angle: shotAngle, distance: shotDistance },
+    shotDirection: { angle: toFieldSpace(shotAngle), distance: shotDistance },
     feedbackMessage,
     isExtraDelivery,
     triggersFreeHit,
+    battingHand: input.battingHand,
   };
 }
 

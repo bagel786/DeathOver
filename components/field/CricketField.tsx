@@ -55,6 +55,7 @@ export default function CricketField({
   onAnimationComplete,
 }: CricketFieldProps) {
   const fielders = useGameStore((s) => s.field.fielders);
+  const battingHand = useGameStore((s) => s.batsman.hand);
   const placeFielder = useGameStore((s) => s.placeFielder);
   const isComplete = useGameStore((s) => s.match.isComplete);
 
@@ -179,16 +180,16 @@ export default function CricketField({
           BOWLER&apos;S END
         </text>
 
-        {/* OFF SIDE / LEG SIDE labels */}
+        {/* OFF SIDE / LEG SIDE labels — these swap sides for a left-hander */}
         <text x="5" y="52" fontSize="2" fill="var(--faint)" fontFamily="var(--mono)" letterSpacing="0.2">
-          OFF
+          {battingHand === "left" ? "LEG" : "OFF"}
         </text>
         <text x="88" y="52" fontSize="2" fill="var(--faint)" fontFamily="var(--mono)" letterSpacing="0.2">
-          LEG
+          {battingHand === "left" ? "OFF" : "LEG"}
         </text>
 
         {/* Pitch */}
-        <PitchStrip />
+        <PitchStrip battingHand={battingHand} />
 
         {/* Ball trajectory animation */}
         <AnimatePresence>

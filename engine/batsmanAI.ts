@@ -16,16 +16,6 @@ export const BATSMAN_PROFILES: Record<BatsmanArchetype, BatsmanProfile> = {
   aggressive: {
     archetype: "aggressive",
     displayName: "Power Hitter",
-    shotPreferences: {
-      off_inner: 0.08,
-      off_outer: 0.18,
-      leg_inner: 0.08,
-      leg_outer: 0.28,
-      straight_inner: 0.06,
-      straight_outer: 0.22,
-      behind_inner: 0.04,
-      behind_outer: 0.06,
-    },
     aggression: 0.85,
     riskTolerance: 0.80,
     spinVulnerability: 0.50,
@@ -37,16 +27,6 @@ export const BATSMAN_PROFILES: Record<BatsmanArchetype, BatsmanProfile> = {
   anchor: {
     archetype: "anchor",
     displayName: "The Wall",
-    shotPreferences: {
-      off_inner: 0.22,
-      off_outer: 0.10,
-      leg_inner: 0.26,
-      leg_outer: 0.08,
-      straight_inner: 0.16,
-      straight_outer: 0.05,
-      behind_inner: 0.09,
-      behind_outer: 0.04,
-    },
     aggression: 0.30,
     riskTolerance: 0.20,
     spinVulnerability: 0.25,
@@ -58,16 +38,6 @@ export const BATSMAN_PROFILES: Record<BatsmanArchetype, BatsmanProfile> = {
   slogger: {
     archetype: "slogger",
     displayName: "The Slogger",
-    shotPreferences: {
-      off_inner: 0.04,
-      off_outer: 0.14,
-      leg_inner: 0.04,
-      leg_outer: 0.38,
-      straight_inner: 0.04,
-      straight_outer: 0.26,
-      behind_inner: 0.04,
-      behind_outer: 0.06,
-    },
     aggression: 0.95,
     riskTolerance: 0.90,
     spinVulnerability: 0.65,
@@ -79,16 +49,6 @@ export const BATSMAN_PROFILES: Record<BatsmanArchetype, BatsmanProfile> = {
   accumulator: {
     archetype: "accumulator",
     displayName: "The Rotator",
-    shotPreferences: {
-      off_inner: 0.22,
-      off_outer: 0.05,
-      leg_inner: 0.26,
-      leg_outer: 0.05,
-      straight_inner: 0.22,
-      straight_outer: 0.05,
-      behind_inner: 0.12,
-      behind_outer: 0.03,
-    },
     aggression: 0.45,
     riskTolerance: 0.35,
     spinVulnerability: 0.40,
@@ -125,6 +85,8 @@ function countZones(fielders: Fielder[]): ZoneCounts {
  * @param pressure          0-1 match pressure
  * @param rng               Seeded RNG for deterministic noise
  * @param lastVariation     Variation bowled on the previous ball (for pattern reading)
+ * @param variations        What this bowler can actually bowl, stock ball first.
+ *                          The batsman never expects a delivery that isn't on the menu.
  */
 export function getAIExpectation(
   fielders: Fielder[],
@@ -132,6 +94,7 @@ export function getAIExpectation(
   pressure: number,
   rng: () => number,
   lastVariation: DeliveryVariation | null = null,
+  variations: DeliveryVariation[] = ["pace", "slower_ball", "off_cutter", "leg_cutter", "outswing", "inswing"],
 ): AIExpectation {
   const z = countZones(fielders);
 
@@ -197,38 +160,36 @@ export function getAIExpectation(
   }
 
   // --- VARIATION heuristic ---
-  // Batsmen try to detect variation from: (a) previous ball, (b) archetype tendency, (c) pure noise
-  const ALL_VARIATIONS: DeliveryVariation[] = ["pace", "slower_ball", "off_cutter", "leg_cutter", "outswing", "inswing"];
+  // Batsmen try to detect variation from: (a) previous ball, (b) archetype tendency, (c) pure noise.
+  // Only what this bowler can actually bowl is considered — no one waits for a
+  // googly from a seamer.
+  const stockBall = variations[0]; // profiles list the stock ball first
+  const variationSignals = {} as Record<DeliveryVariation, number>;
+  for (const key of variations) variationSignals[key] = 0;
 
-  const variationSignals: Record<DeliveryVariation, number> = {
-    pace: 0.30,      // default assumption — bowler bowls pace
-    slower_ball: 0,
-    off_cutter: 0,
-    leg_cutter: 0,
-    outswing: 0,
-    inswing: 0,
-  };
+  variationSignals[stockBall] = 0.30; // default assumption — they bowl their stock ball
 
-  // If bowler just bowled a variation, batsman might look for it again or expect pace
-  if (lastVariation && lastVariation !== "pace") {
+  // If bowler just bowled a variation, batsman might look for it again or expect the stock ball
+  if (lastVariation && lastVariation !== stockBall && variationSignals[lastVariation] !== undefined) {
     // Good readers: "they might repeat it" — bump the last variation
     variationSignals[lastVariation] += batsman.fieldReadingAbility * 0.25;
-    // Also raises pace expectation ("they'll go back to pace to mix it up")
-    variationSignals.pace += batsman.fieldReadingAbility * 0.15;
+    // Also raises stock-ball expectation ("they'll go back to it to mix things up")
+    variationSignals[stockBall] += batsman.fieldReadingAbility * 0.15;
   }
 
-  // Archetype tendency: some batsmen are more tuned to certain variations
+  // Archetype tendency: patient batsmen watch for the deceptive balls, hitters
+  // just sit on the stock delivery and swing.
   if (batsman.archetype === "anchor" || batsman.archetype === "accumulator") {
-    variationSignals.slower_ball += 0.10;
-    variationSignals.off_cutter  += 0.08;
+    // The two most deceptive balls on this bowler's menu — for pace that's the
+    // slower ball and the off cutter, for spin the googly and the top spinner.
+    for (const key of variations.slice(1, 3)) variationSignals[key] += 0.10;
   } else {
-    // Aggressive / slogger: less attuned, just look for pace
-    variationSignals.pace += 0.15;
+    variationSignals[stockBall] += 0.15;
   }
 
   // Add noise for variation (harder to read than length)
   const varNoise = 0.20 + pressure * 0.10;
-  for (const key of ALL_VARIATIONS) {
+  for (const key of variations) {
     variationSignals[key] += rng() * varNoise;
     variationSignals[key] = Math.max(0, variationSignals[key]);
   }
@@ -256,7 +217,8 @@ export function chooseShotDirection(
   deliveryLength: DeliveryLength,
   line: import("@/types/game").DeliveryLine,
   pressure: number,
-  rng: () => number
+  rng: () => number,
+  bowlerType: "pace" | "spin" = "pace"
 ): { angle: number; distance: number } {
 
   // Angle reference (polar, 0° = toward bowler, clockwise):
@@ -330,6 +292,66 @@ export function chooseShotDirection(
     },
   };
 
+  // ── SPIN ────────────────────────────────────────────────────────────────────
+  // Spin is a different shot vocabulary entirely. There is no scoop, no upper
+  // cut, no hook. What there is: the drive (against a ball you can reach), the
+  // sweep and slog sweep (against anything on or outside leg), and the cut
+  // (against anything short and wide). The tossed-up ball is the MOST driveable
+  // delivery in cricket — get to the pitch of it and it goes over long-on.
+  const SPIN_SHOT_ANGLES: Record<DeliveryLength, Record<string, number[]>> = {
+
+    // ── TOSSED UP ─────────────────────────────────────────────────────────────
+    // Flighted, inviting the drive. Batsman comes down the track and hits with
+    // the spin through the line, or sweeps if it's on the pads.
+    yorker: {
+      wide_outside_off: [295, 312, 330], // driven inside-out through extra cover
+      off:              [310, 328, 345], // cover drive / long-off
+      middle:           [340, 355, 12],  // straight down the ground — long-off to long-on
+      leg:              [10, 30, 55],    // driven / whipped: long-on through mid-wicket
+      wide_outside_leg: [45, 68, 92],   // slog swept: cow corner through square leg
+    },
+
+    // ── FULL ──────────────────────────────────────────────────────────────────
+    // Still driveable, slightly less time to get to the pitch.
+    full: {
+      wide_outside_off: [285, 302, 320],
+      off:              [300, 318, 336],
+      middle:           [345, 358, 15],
+      leg:              [18, 40, 62],
+      wide_outside_leg: [50, 72, 95],   // sweep / slog sweep
+    },
+
+    // ── GOOD LENGTH ───────────────────────────────────────────────────────────
+    // The stock ball — worked around, swept, or pushed for one.
+    good_length: {
+      wide_outside_off: [258, 275, 292], // cut / dabbed square of the wicket
+      off:              [292, 310, 328],
+      middle:           [340, 355, 15],
+      leg:              [30, 52, 75],   // worked through mid-wicket
+      wide_outside_leg: [62, 85, 110],  // swept square
+    },
+
+    // ── SHORT OF LENGTH ───────────────────────────────────────────────────────
+    // Sits up. Cut on the off side, pulled or swept on the leg side.
+    short: {
+      wide_outside_off: [252, 268, 285], // cut square: backward point through point
+      off:              [245, 262, 280], // cut behind square
+      middle:           [50, 72, 95],   // rocked back and pulled
+      leg:              [62, 85, 108],  // pulled / swept square
+      wide_outside_leg: [78, 100, 125], // swept behind square
+    },
+
+    // ── LONG HOP ──────────────────────────────────────────────────────────────
+    // The worst ball in cricket. Sits up begging. Everything is on.
+    bouncer: {
+      wide_outside_off: [255, 272, 290], // carved square through point
+      off:              [248, 266, 285], // cut hard
+      middle:           [45, 70, 95],   // pulled into the stands
+      leg:              [58, 82, 105],  // slog swept
+      wide_outside_leg: [72, 95, 120],  // slog swept behind square
+    },
+  };
+
   // Natural shot depth per delivery length — death batsmen swing BIG
   const LENGTH_DISTANCE: Record<DeliveryLength, number> = {
     yorker:      0.55, // scoops / flicks can clear the inner ring but rarely go full boundary
@@ -339,12 +361,25 @@ export function chooseShotDirection(
     bouncer:     0.90, // pull / hook → fully committed shot
   };
 
-  const angles = SHOT_ANGLES[deliveryLength]?.[line] ?? SHOT_ANGLES.good_length.middle;
+  // Spin depth is nearly inverted at the full end: flight buys the bowler
+  // deception, but if the batsman gets to the pitch of it the ball travels
+  // further than anything else. Flight is a gamble, not free money.
+  const SPIN_LENGTH_DISTANCE: Record<DeliveryLength, number> = {
+    yorker:      0.88, // got to the pitch and launched it over long-on
+    full:        0.82,
+    good_length: 0.66, // the stock ball — hardest to get away
+    short:       0.80,
+    bouncer:     0.92, // long hop: dispatched
+  };
+
+  const isSpin = bowlerType === "spin";
+  const table = isSpin ? SPIN_SHOT_ANGLES : SHOT_ANGLES;
+  const angles = table[deliveryLength]?.[line] ?? table.good_length.middle;
   const baseAngle = angles[Math.floor(rng() * angles.length)];
   // ±15° of random variance in shot direction
   const angle = (baseAngle + (rng() - 0.5) * 30 + 360) % 360;
 
-  let distance = LENGTH_DISTANCE[deliveryLength];
+  let distance = (isSpin ? SPIN_LENGTH_DISTANCE : LENGTH_DISTANCE)[deliveryLength];
   // Under pressure, aggressive batsmen swing harder → more elevation / depth
   if (pressure > 0.6) {
     distance = Math.min(1.0, distance + batsman.aggression * 0.18);
