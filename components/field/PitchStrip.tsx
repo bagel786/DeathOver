@@ -35,6 +35,18 @@ export default function PitchStrip({ battingHand = "right" }: { battingHand?: Ba
           x1={stanceX} y1="40" x2={stanceX} y2="43.2"
           stroke="var(--blood)" strokeWidth="0.4"
         />
+        {/* Spelled out — the stance offset alone is too subtle to read */}
+        <text
+          x={battingHand === "left" ? 44.5 : 55.5}
+          y="41"
+          textAnchor={battingHand === "left" ? "end" : "start"}
+          fontSize="2.4"
+          fill="var(--blood)"
+          fontFamily="var(--mono)"
+          letterSpacing="0.2"
+        >
+          {battingHand === "left" ? "LHB" : "RHB"}
+        </text>
       </g>
 
       {/* Popping crease (batsman end) */}

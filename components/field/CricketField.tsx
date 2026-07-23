@@ -181,10 +181,10 @@ export default function CricketField({
         </text>
 
         {/* OFF SIDE / LEG SIDE labels — these swap sides for a left-hander */}
-        <text x="5" y="52" fontSize="2" fill="var(--faint)" fontFamily="var(--mono)" letterSpacing="0.2">
+        <text x="5" y="52" fontSize="2.2" fill="var(--muted)" fontFamily="var(--mono)" letterSpacing="0.2">
           {battingHand === "left" ? "LEG" : "OFF"}
         </text>
-        <text x="88" y="52" fontSize="2" fill="var(--faint)" fontFamily="var(--mono)" letterSpacing="0.2">
+        <text x="88" y="52" fontSize="2.2" fill="var(--muted)" fontFamily="var(--mono)" letterSpacing="0.2">
           {battingHand === "left" ? "OFF" : "LEG"}
         </text>
 
