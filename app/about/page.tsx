@@ -71,7 +71,16 @@ export default function AboutPage() {
                 Safiullah Baig
               </a>
             </li>
-            <li>GitHub profile or repository link (if public)</li>
+            <li>
+              <a
+                href="https://github.com/bagel786/DeathOver"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--paper)", textDecoration: "underline" }}
+              >
+                DeathOver on GitHub
+              </a>
+            </li>
           </ul>
         </section>
 
