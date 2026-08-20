@@ -15,7 +15,10 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.deathover.xyz"),
-  title: "The Death Over — Cricket Strategy Game by Safiullah Baig",
+  title: {
+    default: "The Death Over — Cricket Strategy Game by Safiullah Baig",
+    template: "%s | Death Over",
+  },
   description:
     "The Death Over is a browser-based cricket strategy game created by Safiullah Baig. Set your field, choose deliveries, bluff AI batters, and defend the final over.",
   alternates: {
