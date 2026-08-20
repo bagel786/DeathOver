@@ -2,11 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "About The Death Over | Death Over",
+  title: "About The Death Over",
   description:
     "About The Death Over, a browser-based cricket strategy game created by Safiullah Baig in 2026.",
   alternates: {
     canonical: "/about",
+  },
+  openGraph: {
+    title: "About The Death Over",
+    description:
+      "How Safiullah Baig created The Death Over, a browser-based cricket strategy game about defending the final over.",
+    url: "/about",
+    type: "website",
   },
 };
 

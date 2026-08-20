@@ -34,6 +34,39 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
   },
+  twitter: {
+    card: "summary",
+    title: "The Death Over — Cricket Strategy Game by Safiullah Baig",
+    description:
+      "Set your field, choose deliveries, bluff AI batters, and defend the final over in a browser-based cricket strategy game.",
+  },
+};
+
+const gameJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["VideoGame", "SoftwareApplication"],
+      "@id": "https://www.deathover.xyz/#game",
+      name: "The Death Over",
+      url: "https://www.deathover.xyz/",
+      description:
+        "A browser-based cricket strategy game about defending the final over through field placement, delivery selection, batter behavior, and bluffing.",
+      applicationCategory: "GameApplication",
+      operatingSystem: "Web browser",
+      gamePlatform: "Web browser",
+      genre: ["Cricket", "Strategy"],
+      isAccessibleForFree: true,
+      creator: { "@id": "https://safiullahbaig.com/#person" },
+    },
+    {
+      "@type": "Person",
+      "@id": "https://safiullahbaig.com/#person",
+      name: "Safiullah Baig",
+      url: "https://safiullahbaig.com/",
+      sameAs: ["https://github.com/bagel786"],
+    },
+  ],
 };
 
 export default function RootLayout({
@@ -43,7 +76,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`antialiased ${jetbrainsMono.variable}`}>{children}</body>
+      <body className={`antialiased ${jetbrainsMono.variable}`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(gameJsonLd).replace(/</g, "\\u003c"),
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }
