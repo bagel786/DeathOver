@@ -361,6 +361,32 @@ export default function HomePage() {
           </div>
         ))}
       </div>
+
+      {/* Creator attribution */}
+      <section
+        className="w-full text-center"
+        style={{ maxWidth: 720, borderTop: "2px solid var(--faint)", paddingTop: 20 }}
+      >
+        <p className="font-mono text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
+          <span style={{ color: "var(--paper)", fontWeight: 700 }}>The Death Over</span> is a cricket strategy simulation created and developed by{" "}
+          <a
+            href="https://safiullahbaig.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "var(--paper)", textDecoration: "underline" }}
+          >
+            Safiullah Baig
+          </a>
+          .
+          <br />
+          Launched in 2026.
+        </p>
+        <p className="font-mono text-[10px] uppercase tracking-widest mt-3" style={{ color: "var(--faint)" }}>
+          <a href="/about" style={{ color: "var(--paper)", textDecoration: "underline" }}>
+            About The Death Over
+          </a>
+        </p>
+      </section>
     </main>
   );
 }

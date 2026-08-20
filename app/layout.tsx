@@ -14,15 +14,22 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "The Death Over Challenge",
-  description: "A 2D cricket tactical simulator. Defend your total in the final over.",
+  metadataBase: new URL("https://www.deathover.xyz"),
+  title: "The Death Over — Cricket Strategy Game by Safiullah Baig",
+  description:
+    "The Death Over is a browser-based cricket strategy game created by Safiullah Baig. Set your field, choose deliveries, bluff AI batters, and defend the final over.",
+  alternates: {
+    canonical: "/",
+  },
   icons: {
     icon: "/logo.svg",
   },
   openGraph: {
-    title: "The Death Over Challenge",
-    description: "Can you defend it? Set your field, pick your delivery, survive the death over.",
+    title: "The Death Over — Cricket Strategy Game by Safiullah Baig",
+    description:
+      "The Death Over is a browser-based cricket strategy game created by Safiullah Baig. Set your field, choose deliveries, bluff AI batters, and defend the final over.",
     type: "website",
+    url: "/",
   },
 };
 
