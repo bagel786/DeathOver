@@ -7,6 +7,8 @@ const supabase = createClient(
 );
 
 // GET /api/leaderboard?challenge_id=xxx
+// Light select — heavy ball_log/emoji_summary columns are excluded so the
+// full board (real entries + bots, often 250-500 rows) stays a small payload.
 export async function GET(request: NextRequest) {
   const challengeId = request.nextUrl.searchParams.get("challenge_id");
 
@@ -16,10 +18,9 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase
     .from("leaderboard_entries")
-    .select("*")
+    .select("id, challenge_id, display_name, runs_conceded, wickets_taken, balls_used, result, score, created_at")
     .eq("challenge_id", challengeId)
-    .order("score", { ascending: false })
-    .limit(50);
+    .order("score", { ascending: false });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -90,6 +91,10 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
+    // (challenge_id, display_name) unique index — e.g. someone already used that name today
+    if (error.code === "23505") {
+      return NextResponse.json({ error: "That name already scored today. Try another." }, { status: 409 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

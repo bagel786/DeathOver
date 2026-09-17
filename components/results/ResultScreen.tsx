@@ -216,11 +216,14 @@ export default function ResultScreen() {
         </p>
       )}
 
-      {/* Leaderboard (daily only) */}
+      {/* Leaderboard (daily only) — full board incl. daily bots, scrollable */}
       {isDaily && (loadingBoard || leaderboard.length > 0) && (
         <div className="w-full" style={{ border: "2px solid var(--paper)", maxWidth: 480 }}>
-          <div className="px-5 py-3" style={{ borderBottom: "2px solid var(--paper)" }}>
+          <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: "2px solid var(--paper)" }}>
             <p className="brut-label" style={{ color: "var(--blood)" }}>LEADERBOARD</p>
+            <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+              {leaderboard.length} PLAYERS TODAY
+            </p>
           </div>
           {loadingBoard && leaderboard.length === 0 ? (
             <p className="text-center py-4 font-mono text-xs uppercase tracking-widest" style={{ color: "var(--muted)" }}>
@@ -231,35 +234,43 @@ export default function ResultScreen() {
               Failed to load leaderboard.
             </p>
           ) : (
-            <div className="flex flex-col">
-              {leaderboard.slice(0, 20).map((entry, i) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between px-5 py-2.5 font-mono text-sm"
-                  style={{
-                    borderBottom: i < Math.min(leaderboard.length, 20) - 1 ? "1px solid var(--hair)" : undefined,
-                    background: i === 0 ? "var(--blood-wash)" : undefined,
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="font-bold"
-                      style={{ color: i === 0 ? "var(--blood)" : "var(--muted)", minWidth: 24, fontVariantNumeric: "tabular-nums" }}
-                    >
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="uppercase tracking-wide" style={{ color: "var(--paper)" }}>{entry.display_name}</span>
+            <div className="flex flex-col overflow-y-auto" style={{ maxHeight: 420 }}>
+              {leaderboard.map((entry, i) => {
+                const isMe = displayName.trim().length > 0 && displayName.trim().toLowerCase() === entry.display_name.toLowerCase();
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between px-5 py-2.5 font-mono text-sm"
+                    style={{
+                      borderBottom: i < leaderboard.length - 1 ? "1px solid var(--hair)" : undefined,
+                      background: isMe ? "var(--blood-wash)" : i === 0 ? "var(--blood-wash)" : undefined,
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="font-bold"
+                        style={{ color: isMe ? "var(--blood)" : i === 0 ? "var(--blood)" : "var(--muted)", minWidth: 28, fontVariantNumeric: "tabular-nums" }}
+                      >
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="uppercase tracking-wide truncate" style={{ color: "var(--paper)", maxWidth: 180 }}>{entry.display_name}</span>
+                      {isMe && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-widest" style={{ background: "var(--blood)", color: "var(--ink)" }}>
+                          YOU
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs" style={{ color: "var(--muted)" }}>
+                        {entry.runs_conceded}/{entry.wickets_taken} ({entry.balls_used}b)
+                      </span>
+                      <span className="font-bold" style={{ color: "var(--blood)", fontVariantNumeric: "tabular-nums" }}>
+                        {entry.score}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs" style={{ color: "var(--muted)" }}>
-                      {entry.runs_conceded}/{entry.wickets_taken} ({entry.balls_used}b)
-                    </span>
-                    <span className="font-bold" style={{ color: "var(--blood)", fontVariantNumeric: "tabular-nums" }}>
-                      {entry.score}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {loadingBoard && leaderboard.length > 0 && (

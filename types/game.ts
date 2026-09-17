@@ -230,7 +230,7 @@ export interface LeaderboardEntry {
   balls_used: number;
   result: GameResult;
   score: number;
-  emoji_summary: string;
-  ball_log: BallOutcome[];
+  emoji_summary?: string;
+  ball_log?: BallOutcome[];
   created_at: string;
 }

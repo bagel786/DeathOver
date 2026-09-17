@@ -832,30 +832,7 @@ export function calculateDeliveryOutcome(input: DeliveryInput): BallOutcome {
 // Leaderboard Score Calculator
 // ============================================================
 
-export function calculateScore(
-  target: number,
-  runsConceded: number,
-  wicketsTaken: number,
-  ballsUsed: number,
-  totalBalls: number,
-  result: "won" | "lost" | "tied"
-): number {
-  let score = 0;
-
-  if (result === "won") score += 1000;
-  if (result === "tied") score += 500;
-
-  const runsSaved = target - runsConceded;
-  score += runsSaved * 50;
-  score += wicketsTaken * 150;
-
-  if (result === "won") {
-    const ballsRemaining = totalBalls - ballsUsed;
-    score += ballsRemaining * 75;
-  }
-
-  return Math.max(0, score);
-}
+export { calculateScore } from "@/lib/scoring";
 
 // ============================================================
 // Shareable Emoji Summary
