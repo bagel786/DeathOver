@@ -395,6 +395,10 @@ export default function HomePage() {
           <a href="/about" style={{ color: "var(--paper)", textDecoration: "underline" }}>
             About The Death Over
           </a>
+          {" // "}
+          <a href="/how-to-play" style={{ color: "var(--paper)", textDecoration: "underline" }}>
+            Gameplay guide
+          </a>
         </p>
       </section>
     </main>

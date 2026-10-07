@@ -70,6 +70,11 @@ export default function AboutPage() {
               Play The Death Over
             </Link>
           </p>
+          <p className="mt-3">
+            <Link href="/how-to-play" style={{ color: "var(--paper)", textDecoration: "underline" }}>
+              Read the gameplay rules, bowler guide, and field-placement strategy
+            </Link>
+          </p>
         </section>
 
         <section>

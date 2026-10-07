@@ -46,6 +46,15 @@ const gameJsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     {
+      "@type": "WebSite",
+      "@id": "https://www.deathover.xyz/#website",
+      name: "The Death Over",
+      alternateName: "Death Over",
+      url: "https://www.deathover.xyz/",
+      about: { "@id": "https://www.deathover.xyz/#game" },
+      creator: { "@id": "https://safiullahbaig.com/#person" },
+    },
+    {
       "@type": ["VideoGame", "SoftwareApplication"],
       "@id": "https://www.deathover.xyz/#game",
       name: "The Death Over",
@@ -57,6 +66,7 @@ const gameJsonLd = {
       gamePlatform: "Web browser",
       genre: ["Cricket", "Strategy"],
       isAccessibleForFree: true,
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       creator: { "@id": "https://safiullahbaig.com/#person" },
     },
     {

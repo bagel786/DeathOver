@@ -7,6 +7,8 @@ You set your field, pick your delivery, and watch the simulation play out. The A
 > **[Play The Death Over →](https://www.deathover.xyz/)**
 >
 > [About the game and its creator](https://www.deathover.xyz/about)
+>
+> [Gameplay rules, bowler guide, and strategy](https://www.deathover.xyz/how-to-play)
 
 ---
 
