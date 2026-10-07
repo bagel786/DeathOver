@@ -181,6 +181,16 @@ export default function HomePage() {
           <span style={{ color: "var(--blood)" }}>CHALLENGE</span>
         </h1>
         <hr className="brut-rule" style={{ margin: "20px auto", maxWidth: 480 }} />
+        <p className="font-mono text-sm leading-relaxed" style={{ color: "var(--muted)", maxWidth: 480, margin: "0 auto 12px" }}>
+          The Death Over is a browser-based cricket strategy game created by{" "}
+          <a
+            href="https://safiullahbaig.com/"
+            style={{ color: "var(--paper)", textDecoration: "underline" }}
+          >
+            Safiullah Baig
+          </a>
+          .
+        </p>
         <p className="font-mono text-sm" style={{ color: "var(--muted)", maxWidth: 480, margin: "0 auto" }}>
           Set your field. Pick your delivery. Bluff the batsman.
           <br />

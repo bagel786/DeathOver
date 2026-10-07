@@ -35,6 +35,9 @@ export default function AboutPage() {
         </header>
 
         <section className="font-mono text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+          <h2 className="brut-label" style={{ color: "var(--paper)", marginBottom: 12 }}>
+            WHAT IS THE DEATH OVER?
+          </h2>
           <p>
             The Death Over is a browser-based cricket strategy game created by{" "}
             <a
@@ -49,9 +52,29 @@ export default function AboutPage() {
           </p>
         </section>
 
+        <section className="font-mono text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+          <h2 className="brut-label" style={{ color: "var(--paper)", marginBottom: 12 }}>
+            HOW DO YOU PLAY?
+          </h2>
+          <p>
+            You control the bowling side with six balls to defend a total. Place nine
+            fielders, choose a bowler and delivery, and try to deceive the AI batter.
+            Field placement and delivery selection affect each ball&apos;s outcome.
+          </p>
+          <p className="mt-3">
+            Play the daily challenge or set your own target and wickets remaining in
+            a custom game. The game runs in your browser.
+          </p>
+          <p className="mt-3">
+            <Link href="/" style={{ color: "var(--paper)", textDecoration: "underline" }}>
+              Play The Death Over
+            </Link>
+          </p>
+        </section>
+
         <section>
           <h2 className="brut-label" style={{ color: "var(--paper)", marginBottom: 12 }}>
-            DEVELOPMENT
+            WHO CREATED THE DEATH OVER?
           </h2>
           <ul className="font-mono text-sm flex flex-col gap-2" style={{ color: "var(--muted)" }}>
             <li>Created and developed by Safiullah Baig</li>

@@ -1,11 +1,12 @@
-# 🏏 Death Over
+# The Death Over — Cricket Strategy Game
 
-A tactical cricket browser game where you bowl the final over and try to outsmart an AI batsman.
+The Death Over is a browser-based cricket strategy game created by [Safiullah Baig](https://safiullahbaig.com/). Bowl the final over and try to outsmart an AI batsman.
 
 You set your field, pick your delivery, and watch the simulation play out. The AI reads your field placement to guess what you're about to bowl — so the real game is deception. Fool it with an unexpected delivery and the odds shift in your favour. Get read and it'll put you away.
 
-> **[Play the daily challenge →](https://death-over.up.railway.app)
-> **{also available here -> ] (http://www.deathover.xyz/)
+> **[Play The Death Over →](https://www.deathover.xyz/)**
+>
+> [About the game and its creator](https://www.deathover.xyz/about)
 
 ---
 
