@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start -H 0.0.0.0",
-    "check": "node engine/dismissal.check.mjs"
+    "check": "node engine/dismissal.check.mjs && npm run check:cadence",
+    "check:cadence": "node lib/botCadence.check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

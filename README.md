@@ -168,6 +168,32 @@ Wickets:    +150 pts each
 Economy:    +75 pts per ball remaining (win only)
 ```
 
+### Synthetic leaderboard cadence
+
+New daily boards still receive 250–500 synthetic entries, but each has a seeded
+arrival timestamp inside that challenge's UTC day. The leaderboard API only
+returns rows whose `created_at` is at or before the server's current time and
+disables caching. A board can therefore stay unchanged between activity windows
+and fill gradually without a recurring job or additional database columns.
+Real submissions retain their normal database timestamp and appear immediately.
+Already-seeded boards are left intact; the cadence begins with newly seeded days.
+Raw database reads include scheduled future rows; use the leaderboard API for
+the board currently visible to players.
+
+The initial activity shape follows [WhatPulse's PC-gaming activity sample](https://whatpulse.org/research/when-people-play-games/),
+which reports an evening peak and early-morning low. The model blends equal
+starting weights for Chicago, London, Kolkata, and Sydney, with a small seeded
+daily variation in those weights. IANA zones handle daylight saving. This is a
+configurable mixed-audience assumption, not measured Death Over demographics.
+Short irregular activity windows introduce bursts and gaps, consistent with the
+general observation of [bursty human activity](https://www.nature.com/articles/nature03459).
+The exact window sizes are design choices. These studies do not establish the
+hourly submission rate for this game; tune the model using actual play data.
+
+Run `npm run check:cadence` for deterministic scheduling, day-boundary, plateau,
+and API visibility regression checks. On Node 24+, `npm run check` also runs the
+existing simulation checks.
+
 ---
 
 ## Deployment
