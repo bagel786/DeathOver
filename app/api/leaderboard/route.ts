@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -20,13 +22,14 @@ export async function GET(request: NextRequest) {
     .from("leaderboard_entries")
     .select("id, challenge_id, display_name, runs_conceded, wickets_taken, balls_used, result, score, created_at")
     .eq("challenge_id", challengeId)
+    .lte("created_at", new Date().toISOString())
     .order("score", { ascending: false });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
 }
 
 // POST /api/leaderboard

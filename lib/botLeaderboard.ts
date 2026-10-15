@@ -1,6 +1,6 @@
 /**
  * Rotating bot leaderboard — seeds each daily challenge with 250-500
- * synthetic entries so the board always looks like a real crowd.
+ * synthetic entries with scheduled arrival times throughout the UTC day.
  *
  * Determinism: everything derives from mulberry32 seeded with the challenge
  * id, so re-running for the same challenge produces the exact same rows
@@ -11,6 +11,7 @@
 import type { DailyChallenge, BallOutcome, BallResult, ChaosEvent, DeliveryLength, DeliveryVariation, DeliveryLine, AIExpectation, BattingHand } from "@/types/game";
 import { mulberry32 } from "@/engine/rng";
 import { calculateScore } from "@/lib/scoring";
+import { generateBotArrivalTimes } from "@/lib/botCadence";
 import { supabaseAdmin as supabase } from "@/lib/supabaseAdmin";
 
 const MIN_BOTS = 250;
@@ -24,6 +25,7 @@ const LINES: DeliveryLine[] = ["wide_outside_off", "off", "middle", "leg", "wide
 
 interface BotEntry {
   challenge_id: string;
+  created_at: string;
   display_name: string;
   runs_conceded: number;
   wickets_taken: number;
@@ -41,6 +43,7 @@ async function fetchPlayerNames(): Promise<string[]> {
     const { data, error } = await supabase
       .from("players")
       .select("display_name")
+      .order("display_name", { ascending: true })
       .range(page * PLAYER_PAGE_SIZE, (page + 1) * PLAYER_PAGE_SIZE - 1);
     if (error) throw new Error(`players fetch failed: ${error.message}`);
     if (!data || data.length === 0) break;
@@ -118,8 +121,10 @@ function generateBotEntries(rng: () => number, challenge: DailyChallenge, names:
   }
   const count = MIN_BOTS + Math.floor(rng() * (MAX_BOTS - MIN_BOTS + 1));
   const picked = pool.slice(0, Math.min(count, pool.length));
+  // Separate RNG stream keeps scheduling independent of scores and outcomes.
+  const arrivals = generateBotArrivalTimes(challenge.date, picked.length, hashSeed(`${challenge.id}:cadence`));
 
-  return picked.map((display_name) => {
+  return picked.map((display_name, index) => {
     const roll = rng();
     const result: "won" | "lost" | "tied" = roll < 0.3 ? "won" : roll < 0.35 ? "tied" : "lost";
 
@@ -153,6 +158,7 @@ function generateBotEntries(rng: () => number, challenge: DailyChallenge, names:
 
     return {
       challenge_id: challenge.id,
+      created_at: arrivals[index],
       display_name,
       runs_conceded,
       wickets_taken,
@@ -170,6 +176,8 @@ function generateBotEntries(rng: () => number, challenge: DailyChallenge, names:
  * Deterministic generation + a dedupe pass makes this idempotent without a
  * DB unique constraint (the live table has none): re-runs skip existing
  * names and any racing double-seed gets cleaned up.
+ * Future synthetic rows are stored once; the leaderboard GET only exposes
+ * arrivals due by the server's current time. No frequent cron is needed.
  */
 export async function seedBotsForChallenge(challenge: DailyChallenge): Promise<void> {
   const { count } = await supabase
