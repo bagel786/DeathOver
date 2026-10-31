@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { mulberry32 } from "@/engine/rng";
-import { generateBotArrivalTimes } from "@/lib/botCadence";
+import { generateBotArrivalTimes } from "@/lib/activityCadence";
 
 export const AI_PREFIX = "deathover-ai-v1-";
 export const REPORTING_ADJUSTMENT = { games: 5500, profiles: 1800 };

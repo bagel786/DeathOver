@@ -5,7 +5,7 @@
 
 import type { BatsmanArchetype, DailyChallenge } from "@/types/game";
 import { mulberry32 } from "@/engine/rng";
-import { seedBotsForChallenge } from "@/lib/botLeaderboard";
+import { seedBotsForChallenge } from "@/lib/leaderboardActivity";
 import { supabase } from "@/lib/supabase";
 
 const ARCHETYPES: BatsmanArchetype[] = ["aggressive", "anchor", "slogger", "accumulator"];

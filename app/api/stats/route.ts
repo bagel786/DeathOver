@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { AI_PREFIX, reportedTotals } from "@/lib/botGrowth";
+import { AI_PREFIX, reportedTotals } from "@/lib/activityGrowth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
