@@ -344,7 +344,6 @@ export default function HomePage() {
           <span style={{ color: "var(--paper)" }}>{stats.total_plays.toLocaleString()}</span> GAMES
           {" // "}
           <span style={{ color: "var(--paper)" }}>{stats.unique_users.toLocaleString()}</span> PROFILES
-          <span className="block mt-2 normal-case tracking-normal" style={{ color: "var(--muted)" }}>Includes simulated games and AI profiles.</span>
         </p>
       )}
 

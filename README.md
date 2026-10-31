@@ -199,10 +199,8 @@ Daily generation writes scheduled AI games to `game_sessions`, using reserved
 `deathover-ai-v1-` profile IDs and deterministic primary keys. Repeated games
 reuse profiles; only the first attempt per profile goes on the daily board.
 Stats exclude future games and count distinct due AI profiles, with paginated
-reads beyond the REST 1,000-row limit. They report the adjustment and synthetic
-breakdown separately. AI profiles never enter the existing `players` pool.
-The public game recording route rejects reserved AI IDs. Indian-inspired gamer
-handles carry an explicit `[AI]` suffix; the homepage also discloses simulations.
+reads beyond the REST 1,000-row limit. AI profiles never enter the existing
+`players` pool. The public game recording route rejects reserved AI IDs.
 The existing daily cron and normal challenge loading both perform idempotent
 seeding, including recovery after a partial failure. No database migration is needed.
 

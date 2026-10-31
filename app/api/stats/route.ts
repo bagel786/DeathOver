@@ -56,9 +56,11 @@ export async function GET() {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     for (const row of data ?? []) profiles.add(row.anonymous_user_id);
   }
-  return NextResponse.json(reportedTotals(sessionsRes.count ?? 0, playersRes.count ?? 0, aiGamesRes.count ?? 0, profiles.size), {
-    headers: { "Cache-Control": "no-store" },
-  });
+  const totals = reportedTotals(sessionsRes.count ?? 0, playersRes.count ?? 0, aiGamesRes.count ?? 0, profiles.size);
+  return NextResponse.json(
+    { total_plays: totals.total_plays, unique_users: totals.unique_users },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
 
 export async function POST(request: NextRequest) {

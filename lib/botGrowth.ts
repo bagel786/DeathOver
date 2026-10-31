@@ -35,7 +35,7 @@ export function botHandle(profile: number) {
   const rng = mulberry32(profile + 0xdecade);
   const pick = (pool: string[]) => pool[Math.floor(rng() * pool.length)];
   const name = rng() < 0.7 ? `${pick(FIRST)}_${pick(CRICKET)}` : `${pick(PLACE)}_${pick(CRICKET)}`;
-  return `${name.slice(0, 21)}${profile.toString(36)} [AI]`;
+  return `${name.slice(0, 21)}${profile.toString(36)}`;
 }
 
 export function dailyBotActivity(date: string) {
