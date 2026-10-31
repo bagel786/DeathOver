@@ -222,7 +222,7 @@ export default function ResultScreen() {
           <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: "2px solid var(--paper)" }}>
             <p className="brut-label" style={{ color: "var(--blood)" }}>LEADERBOARD</p>
             <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: "var(--muted)" }}>
-              {leaderboard.length} PLAYERS TODAY
+              {leaderboard.length} ENTRIES TODAY · INCLUDES AI
             </p>
           </div>
           {loadingBoard && leaderboard.length === 0 ? (

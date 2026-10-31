@@ -170,15 +170,44 @@ Economy:    +75 pts per ball remaining (win only)
 
 ### Synthetic leaderboard cadence
 
-New daily boards still receive 250–500 synthetic entries, but each has a seeded
+Before November 2026, daily boards received 250–500 synthetic entries, each with a seeded
 arrival timestamp inside that challenge's UTC day. The leaderboard API only
 returns rows whose `created_at` is at or before the server's current time and
 disables caching. A board can therefore stay unchanged between activity windows
 and fill gradually without a recurring job or additional database columns.
 Real submissions retain their normal database timestamp and appear immediately.
-Already-seeded boards are left intact; the cadence begins with newly seeded days.
+Already-seeded boards are left intact.
 Raw database reads include scheduled future rows; use the leaderboard API for
 the board currently visible to players.
+
+From **November 1, 2026**, `lib/botGrowth.ts` owns the activity budget:
+
+| UTC milestone | Added AI games | Added AI profiles | Projected displayed games / profiles* |
+| --- | ---: | ---: | --- |
+| Nov 1, 2026 | 0 | 0 | 29,304 / 10,227 |
+| Dec 1, 2026 | 2,196 | 273 | 31,500 / 10,500 |
+| Apr 1, 2027 | 5,596 | 1,373 | 34,900 / 11,600 |
+
+*Projections assume the Oct 31 recorded totals (34,804 sessions / 12,027 names)
+and no additional recorded activity. A reversible reporting adjustment subtracts
+5,500 games / 1,800 profiles; no historical records are deleted. Real submissions
+remain additive. Until Apr 1, the synthetic contribution is limited to remaining
+headroom below 35,000 displayed games; recorded activity itself is never capped.
+After Apr 1, the later rate continues (about 28 games / 9 profiles per day).
+
+Daily generation writes scheduled AI games to `game_sessions`, using reserved
+`deathover-ai-v1-` profile IDs and deterministic primary keys. Repeated games
+reuse profiles; only the first attempt per profile goes on the daily board.
+Stats exclude future games and count distinct due AI profiles, with paginated
+reads beyond the REST 1,000-row limit. They report the adjustment and synthetic
+breakdown separately. AI profiles never enter the existing `players` pool.
+The public game recording route rejects reserved AI IDs. Indian-inspired gamer
+handles carry an explicit `[AI]` suffix; the homepage also discloses simulations.
+The existing daily cron and normal challenge loading both perform idempotent
+seeding, including recovery after a partial failure. No database migration is needed.
+
+Run `npm run check:growth` for milestones, March cap, later continuation,
+unique identities, day boundaries, and partial-failure/concurrent retry checks.
 
 The initial activity shape follows [WhatPulse's PC-gaming activity sample](https://whatpulse.org/research/when-people-play-games/),
 which reports an evening peak and early-morning low. The model blends equal

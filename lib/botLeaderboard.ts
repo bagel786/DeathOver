@@ -12,6 +12,7 @@ import type { DailyChallenge, BallOutcome, BallResult, ChaosEvent, DeliveryLengt
 import { mulberry32 } from "@/engine/rng";
 import { calculateScore } from "@/lib/scoring";
 import { generateBotArrivalTimes } from "@/lib/botCadence";
+import { dailyBotActivity, GROWTH_START, stableId } from "@/lib/botGrowth";
 import { supabaseAdmin as supabase } from "@/lib/supabaseAdmin";
 
 const MIN_BOTS = 250;
@@ -109,7 +110,7 @@ function makeBotBallLog(rng: () => number, balls: number, wickets: number, runs:
   return log;
 }
 
-function generateBotEntries(rng: () => number, challenge: DailyChallenge, names: string[]): BotEntry[] {
+function generateBotEntries(rng: () => number, challenge: DailyChallenge, names: string[], activity?: ReturnType<typeof dailyBotActivity>): BotEntry[] {
   const target = challenge.target_runs;
   const wicketsRemaining = challenge.wickets_remaining;
 
@@ -120,9 +121,9 @@ function generateBotEntries(rng: () => number, challenge: DailyChallenge, names:
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
   const count = MIN_BOTS + Math.floor(rng() * (MAX_BOTS - MIN_BOTS + 1));
-  const picked = pool.slice(0, Math.min(count, pool.length));
+  const picked = activity ? activity.map((game) => game.display_name) : pool.slice(0, Math.min(count, pool.length));
   // Separate RNG stream keeps scheduling independent of scores and outcomes.
-  const arrivals = generateBotArrivalTimes(challenge.date, picked.length, hashSeed(`${challenge.id}:cadence`));
+  const arrivals = activity ? activity.map((game) => game.created_at) : generateBotArrivalTimes(challenge.date, picked.length, hashSeed(`${challenge.id}:cadence`));
 
   return picked.map((display_name, index) => {
     const roll = rng();
@@ -141,9 +142,9 @@ function generateBotEntries(rng: () => number, challenge: DailyChallenge, names:
         wickets_taken = Math.floor(rng() * Math.min(wicketsRemaining, 4));
         balls_used = 6;
       }
-      runs_conceded = Math.floor(rng() * target); // defended: 0..target-1
+      runs_conceded = Math.floor(rng() * (allOut ? target : Math.max(1, target - 1)));
     } else if (result === "tied") {
-      runs_conceded = target;
+      runs_conceded = target - 1;
       wickets_taken = Math.floor(rng() * Math.min(wicketsRemaining, 4));
       balls_used = 6;
     } else {
@@ -180,6 +181,10 @@ function generateBotEntries(rng: () => number, challenge: DailyChallenge, names:
  * arrivals due by the server's current time. No frequent cron is needed.
  */
 export async function seedBotsForChallenge(challenge: DailyChallenge): Promise<void> {
+  if (challenge.date >= GROWTH_START) {
+    await seedScheduledActivity(challenge);
+    return;
+  }
   const { count } = await supabase
     .from("leaderboard_entries")
     .select("id", { count: "exact", head: true })
@@ -211,6 +216,33 @@ export async function seedBotsForChallenge(challenge: DailyChallenge): Promise<v
   }
 
   await dedupeChallenge(challenge.id);
+}
+
+async function seedScheduledActivity(challenge: DailyChallenge) {
+  const activity = dailyBotActivity(challenge.date);
+  if (!activity.length) return;
+  const entries = generateBotEntries(mulberry32(hashSeed(challenge.id)), challenge, [], activity);
+  // Stable primary keys make retries and simultaneous cron/page requests safe.
+  // Each game is recorded once; repeat plays reuse the same AI profile.
+  const sessions = activity.map((game, index) => ({
+    id: game.id,
+    anonymous_user_id: game.anonymous_user_id,
+    created_at: game.created_at,
+    is_daily: true,
+    result: entries[index].result,
+  }));
+  const { error: sessionError } = await supabase.from("game_sessions").upsert(sessions, { onConflict: "id", ignoreDuplicates: true });
+  if (sessionError) throw new Error(`AI activity recording failed: ${sessionError.message}`);
+
+  // One first-attempt score per profile, matching the daily board's normal rule.
+  const first = new Map<string, BotEntry & { id: string }>();
+  for (const entry of entries) {
+    if (!first.has(entry.display_name)) first.set(entry.display_name, {
+      ...entry, id: stableId(`leaderboard:${challenge.id}:${entry.display_name}`),
+    });
+  }
+  const { error: boardError } = await supabase.from("leaderboard_entries").upsert([...first.values()], { onConflict: "id", ignoreDuplicates: true });
+  if (boardError) throw new Error(`AI leaderboard recording failed: ${boardError.message}`);
 }
 
 /**

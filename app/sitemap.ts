@@ -5,7 +5,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
       url: "https://www.deathover.xyz/",
-      lastModified: "2026-10-07",
+      lastModified: "2026-10-31",
       changeFrequency: "weekly",
       priority: 1,
     },

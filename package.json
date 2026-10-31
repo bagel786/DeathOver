@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start -H 0.0.0.0",
-    "check": "node engine/dismissal.check.mjs && npm run check:cadence",
+    "check": "node engine/dismissal.check.mjs && npm run check:cadence && npm run check:growth",
+    "check:growth": "node lib/botGrowth.check.mjs",
     "check:cadence": "node lib/botCadence.check.mjs"
   },
   "dependencies": {
