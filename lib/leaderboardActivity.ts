@@ -11,8 +11,8 @@
 import type { DailyChallenge, BallOutcome, BallResult, ChaosEvent, DeliveryLength, DeliveryVariation, DeliveryLine, AIExpectation, BattingHand } from "@/types/game";
 import { mulberry32 } from "@/engine/rng";
 import { calculateScore } from "@/lib/scoring";
-import { generateBotArrivalTimes } from "@/lib/botCadence";
-import { dailyBotActivity, GROWTH_START, stableId } from "@/lib/botGrowth";
+import { generateBotArrivalTimes } from "@/lib/activityCadence";
+import { dailyBotActivity, GROWTH_START, stableId } from "@/lib/activityGrowth";
 import { supabaseAdmin as supabase } from "@/lib/supabaseAdmin";
 
 const MIN_BOTS = 250;
@@ -194,7 +194,7 @@ export async function seedBotsForChallenge(challenge: DailyChallenge): Promise<v
 
   const names = await fetchPlayerNames();
   if (names.length === 0) {
-    console.error("[botLeaderboard] players table is empty — nothing to seed");
+    console.error("[leaderboardActivity] players table is empty — nothing to seed");
     return;
   }
 
@@ -212,7 +212,7 @@ export async function seedBotsForChallenge(challenge: DailyChallenge): Promise<v
   for (let i = 0; i < fresh.length; i += INSERT_CHUNK) {
     const chunk = fresh.slice(i, i + INSERT_CHUNK);
     const { error } = await supabase.from("leaderboard_entries").insert(chunk);
-    if (error) console.error(`[botLeaderboard] chunk insert failed: ${error.message}`);
+    if (error) console.error(`[leaderboardActivity] chunk insert failed: ${error.message}`);
   }
 
   await dedupeChallenge(challenge.id);
@@ -268,7 +268,7 @@ async function dedupeChallenge(challengeId: string): Promise<void> {
       .from("leaderboard_entries")
       .delete()
       .in("id", toDelete.slice(i, i + INSERT_CHUNK));
-    if (error) console.error(`[botLeaderboard] dedupe delete failed: ${error.message}`);
+    if (error) console.error(`[leaderboardActivity] dedupe delete failed: ${error.message}`);
   }
 }
 

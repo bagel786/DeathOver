@@ -180,7 +180,7 @@ Already-seeded boards are left intact.
 Raw database reads include scheduled future rows; use the leaderboard API for
 the board currently visible to players.
 
-From **November 1, 2026**, `lib/botGrowth.ts` owns the activity budget:
+From **November 1, 2026**, `lib/activityGrowth.ts` owns the activity budget:
 
 | UTC milestone | Added AI games | Added AI profiles | Projected displayed games / profiles* |
 | --- | ---: | ---: | --- |
